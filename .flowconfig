@@ -1,0 +1,11 @@
+[ignore]
+# <PROJECT_ROOT>/node_modules/.*
+<PROJECT_ROOT>/node_modules/fbjs/lib/Deferred.js.flow
+<PROJECT_ROOT>/node_modules/fbjs/lib/shallowEqual.js.flow
+
+[options]
+unsafe.enable_getters_and_setters=true
+esproposal.class_instance_fields=enable
+suppress_comment=\\(.\\|\n\\)*\\$FlowFixMe
+suppress_comment=\\(.\\|\n\\)*\\$FlowIssue
+
