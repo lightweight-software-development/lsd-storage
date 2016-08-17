@@ -2,34 +2,37 @@ const ObservableData = require('lsd-events').ObservableData
 
 class SynchronizingStore {
 
-    constructor(reduxStore) {
-        Object.assign(this, {reduxStore})
+    constructor(initialState) {
+        this.state = new ObservableData(initialState)
         this.dispatches = new ObservableData()
-        this.dispatch = this.dispatch.bind(this)
+
+        this._updateState = this._updateState.bind(this)
         this.applyAction = this.applyAction.bind(this)
     }
 
-    getState() {
-        return this.reduxStore.getState()
-    }
-
-    dispatch(action) {
-        this.applyAction(action)
-        const latestUpdateAction = this.reduxStore.getState().$actionForLatestUpdate
-        if (latestUpdateAction) {
-            this.dispatches.value = latestUpdateAction
+    updateAndSave(methodName, ...args) {
+        this._updateState(methodName, args)
+        if (args.length > 1) {
+            throw new Error("Cannot handle multiple arguments yet: " + args)        // TODO  handle multiple arguments
         }
+        this.dispatches.value = {type: methodName, data: args[0]}
     }
 
-    subscribe(listener) {
-        return this.reduxStore.subscribe(listener)
+    _updateState(methodName, args) {
+        const currentState = this.state.value
+        const updateFunction = currentState[methodName]
+        if (typeof updateFunction !== 'function')  {
+            console.error( `Method ${methodName} not found on ${currentState}`)
+            return
+        }
+        this.state.value = updateFunction.apply(currentState, args)
     }
 
     applySnapshot() {
     }
 
     applyAction(action) {
-        return this.reduxStore.dispatch(action)
+        this._updateState(action.type, [action.data])
     }
 
 }

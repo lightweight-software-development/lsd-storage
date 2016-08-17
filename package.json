@@ -1,16 +1,18 @@
 {
   "name": "lsd-storage",
   "description": "lsd-storage",
-  "version": "0.0.4",
+  "version": "0.0.2-15",
   "scripts": {
     "build": "babel main -d dist",
+    "build-dev": "npm run build && npm version prerelease --no-git-tag",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "main": "dist/index.js",
   "dependencies": {
     "immutable": "^3.8.1",
     "lodash": "^4.15.0",
-    "lsd-events": "file:///Users/paulb/dev/lsd-events"
+    "lsd-events": "file:///Users/paulb/dev/lsd-events",
+    "node-uuid": "^1.4.7"
   },
   "devDependencies": {
     "babel-cli": "^6.10.1",

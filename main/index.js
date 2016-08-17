@@ -5,5 +5,6 @@ module.exports = {
     PersistentStoreController: require('./store/PersistentStoreController'),
     S3UpdateStore: require('./store/S3UpdateStore'),
     SynchronizingStore: require('./store/SynchronizingStore'),
+    EntityManager: require('./store/EntityManager'),
     JsonUtil: require('./json/JsonUtil'),
 }

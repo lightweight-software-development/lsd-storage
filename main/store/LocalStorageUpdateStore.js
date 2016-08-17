@@ -26,7 +26,7 @@ class LocalStorageUpdateStore {
 
     storeUpdate(update) {
         const updatedUpdates = this.allUpdates.value.concat(update)
-        this.allUpdates = this._writeToStorage(this.updateStoreKey, updatedUpdates)
+        this.allUpdates.value = this._writeToStorage(this.updateStoreKey, updatedUpdates)
     }
 
     _getFromStorage(key) {
