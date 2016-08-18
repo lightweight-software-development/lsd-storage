@@ -1,7 +1,7 @@
 {
   "name": "lsd-storage",
   "description": "lsd-storage",
-  "version": "0.0.2-15",
+  "version": "0.0.2-19",
   "scripts": {
     "build": "babel main -d dist",
     "build-dev": "npm run build && npm version prerelease --no-git-tag",
@@ -11,7 +11,7 @@
   "dependencies": {
     "immutable": "^3.8.1",
     "lodash": "^4.15.0",
-    "lsd-events": "file:///Users/paulb/dev/lsd-events",
+    "lsd-observable": "file:///Users/paulb/dev/lsd-observable",
     "node-uuid": "^1.4.7"
   },
   "devDependencies": {

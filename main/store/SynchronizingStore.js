@@ -1,4 +1,4 @@
-const ObservableData = require('lsd-events').ObservableData
+const ObservableData = require('lsd-observable').ObservableData
 
 class SynchronizingStore {
 
@@ -8,6 +8,10 @@ class SynchronizingStore {
 
         this._updateState = this._updateState.bind(this)
         this.applyAction = this.applyAction.bind(this)
+    }
+
+    get appState() {
+        return this.state.value
     }
 
     updateAndSave(methodName, ...args) {

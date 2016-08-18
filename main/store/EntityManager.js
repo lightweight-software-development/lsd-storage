@@ -2,11 +2,12 @@ const uuid = require('node-uuid')
 
 module.exports = class EntityManager {
 
-    constructor(appStore, entityType) {
+    constructor(appStore, entityType, saveFunction) {
         this.appStore = appStore
         this.entityType = entityType
         this.typeName = entityType.name
         this.typeLowerCase = this.typeName.toLowerCase()
+        this.saveFunction = saveFunction || `set${this.typeName}`
     }
     get(id) { return this.appStore.state.value[this.typeLowerCase](id) }
 
@@ -18,8 +19,7 @@ module.exports = class EntityManager {
 
     save(entity) {
         const entityWithId = entity.id ? entity : entity.merge({id: uuid.v4()})
-        const setFunction = "set" + this.typeName
-        this.appStore.updateAndSave(setFunction, entityWithId)
+        this.appStore.updateAndSave(this.saveFunction, entityWithId)
         return entityWithId
     }
 

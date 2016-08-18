@@ -1,4 +1,4 @@
-const ObservableData = require('lsd-events').ObservableData
+const ObservableData = require('lsd-observable').ObservableData
 
 class CognitoCredentialsSource {
 

@@ -1,7 +1,7 @@
 const uuid = require('node-uuid')
 const {List} = require('immutable')
 
-const ObservableData = require('lsd-events').ObservableData
+const ObservableData = require('lsd-observable').ObservableData
 
 class PersistentStoreController {
 

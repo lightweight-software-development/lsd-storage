@@ -1,6 +1,6 @@
 const uuid = require('node-uuid')
 
-const ObservableData = require('lsd-events').ObservableData
+const ObservableData = require('lsd-observable').ObservableData
 const PersistentStoreController = require('./PersistentStoreController')
 
 function newId() {

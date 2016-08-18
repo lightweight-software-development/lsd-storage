@@ -1,5 +1,5 @@
-const ObservableData = require('lsd-events').ObservableData
-const bindFunctions = require('lsd-events').bindFunctions
+const ObservableData = require('lsd-observable').ObservableData
+const bindFunctions = require('lsd-observable').bindFunctions
 const JsonUtil = require('../json/JsonUtil')
 
 class LocalStorageUpdateStore {

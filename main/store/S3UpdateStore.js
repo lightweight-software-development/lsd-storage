@@ -4,7 +4,7 @@ const root = (typeof self === 'object' && self.self === self && self) ||
     this
 
 const AWS = root.AWS
-const ObservableData = require('lsd-events').ObservableData
+const ObservableData = require('lsd-observable').ObservableData
 
 
 module.exports = class S3UpdateStore {
