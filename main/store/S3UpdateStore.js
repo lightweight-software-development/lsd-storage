@@ -4,7 +4,7 @@ const root = (typeof self === 'object' && self.self === self && self) ||
     this
 
 const AWS = root.AWS
-const ObservableData = require('lsd-observable').ObservableData
+const {ObservableValue, ObservableEvent} = require('lsd-observable')
 
 
 module.exports = class S3UpdateStore {
@@ -13,8 +13,8 @@ module.exports = class S3UpdateStore {
         Object.assign(this, {bucketName, keyPrefix, appId, dataSet})
         credentialsSource.credentialsAvailable.sendTo( this.credentialsAvailable.bind(this) )
 
-        this.updateStored = new ObservableData()
-        this.storeAvailable = new ObservableData(false)
+        this.updateStored = new ObservableEvent()
+        this.storeAvailable = new ObservableValue(false)
 
         this.storeUpdate = this.storeUpdate.bind(this)
         AWS.config.region = 'eu-west-1'
@@ -70,7 +70,7 @@ module.exports = class S3UpdateStore {
         AWS.config.credentials = credentials;
 
         this.s3 = new AWS.S3()
-        this.storeAvailable.set(true)
+        this.storeAvailable.value = true
         console.log('Logged in.');
     }
 

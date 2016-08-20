@@ -1,26 +1,33 @@
-const ObservableData = require('lsd-observable').ObservableData
+require('aws-sdk/dist/aws-sdk')
+const root = (typeof self === 'object' && self.self === self && self) ||
+    (typeof global === 'object' && global.global === global && global) ||
+    this
+
+const AWS = root.AWS
+
+const {ObservableEvent, bindFunctions} = require('lsd-observable')
 
 class CognitoCredentialsSource {
 
     constructor(identityPoolId) {
         this.identityPoolId = identityPoolId
-        this.credentialsAvailable = new ObservableData()
-        this.credentialsInvalid = new ObservableData()
-        this.signIn = this.signIn.bind(this)
-        this.signOut = this.signIn.bind(this)
+        this.credentialsAvailable = new ObservableEvent()
+        this.credentialsInvalid = new ObservableEvent()
+        bindFunctions(this)
     }
 
     signIn(authResponse) {
-        this.credentialsAvailable.value = new AWS.CognitoIdentityCredentials({
+        const credentials = new AWS.CognitoIdentityCredentials({
             IdentityPoolId: this.identityPoolId,
             Logins: {
                 'accounts.google.com': authResponse.id_token
             }
         })
+        this.credentialsAvailable.send(credentials)
     }
 
     signOut() {
-        this.credentialsInvalid.value = true
+        this.credentialsInvalid.send(true)
     }
 }
 

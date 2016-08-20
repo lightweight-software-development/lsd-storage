@@ -1,10 +1,10 @@
-const ObservableData = require('lsd-observable').ObservableData
+const {ObservableValue, ObservableEvent} = require('lsd-observable')
 
 class SynchronizingStore {
 
     constructor(initialState) {
-        this.state = new ObservableData(initialState)
-        this.dispatches = new ObservableData()
+        this.state = new ObservableValue(initialState)
+        this.dispatches = new ObservableEvent()
 
         this._updateState = this._updateState.bind(this)
         this.applyAction = this.applyAction.bind(this)
@@ -19,7 +19,7 @@ class SynchronizingStore {
         if (args.length > 1) {
             throw new Error("Cannot handle multiple arguments yet: " + args)        // TODO  handle multiple arguments
         }
-        this.dispatches.value = {type: methodName, data: args[0]}
+        this.dispatches.send({type: methodName, data: args[0]})
     }
 
     _updateState(methodName, args) {

@@ -1,5 +1,4 @@
-const ObservableData = require('lsd-observable').ObservableData
-const bindFunctions = require('lsd-observable').bindFunctions
+const {ObservableValue, bindFunctions} = require('lsd-observable')
 const JsonUtil = require('../json/JsonUtil')
 
 class LocalStorageUpdateStore {
@@ -8,8 +7,8 @@ class LocalStorageUpdateStore {
         this.actionStoreKey = `${appId}.${dataSet}.actions`
         this.updateStoreKey = `${appId}.${dataSet}.updates`
         this.storage = window.localStorage
-        this.allActions = new ObservableData(this._getFromStorage(this.actionStoreKey))
-        this.allUpdates = new ObservableData(this._getFromStorage(this.updateStoreKey))
+        this.allActions = new ObservableValue(this._getFromStorage(this.actionStoreKey))
+        this.allUpdates = new ObservableValue(this._getFromStorage(this.updateStoreKey))
         bindFunctions(this)
     }
 

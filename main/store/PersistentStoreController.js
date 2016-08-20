@@ -1,7 +1,7 @@
 const uuid = require('node-uuid')
 const {List} = require('immutable')
 
-const ObservableData = require('lsd-observable').ObservableData
+const {ObservableEvent} = require('lsd-observable')
 
 class PersistentStoreController {
 
@@ -24,12 +24,11 @@ class PersistentStoreController {
         this._remoteStoreAvailable = false
 
         // outgoing data
-        //TODO use ObservableEvent - no initial update when subscribe, latestEvent instead of value
-        this.actionToStore = new ObservableData()
-        this.actionsToApply = new ObservableData()
-        this.updateToStoreLocal = new ObservableData()
-        this.actionsToDelete = new ObservableData()
-        this.updateToStoreRemote = new ObservableData()
+        this.actionToStore = new ObservableEvent()
+        this.actionsToApply = new ObservableEvent()
+        this.updateToStoreLocal = new ObservableEvent()
+        this.actionsToDelete = new ObservableEvent()
+        this.updateToStoreRemote = new ObservableEvent()
 
         this.init = this.init.bind(this)
         this.actionFromApp = this.actionFromApp.bind(this)
@@ -44,13 +43,13 @@ class PersistentStoreController {
     init() {
         const actionsFromUpdates = this._localStoredUpdates.reduce((acc, val) => acc.concat(val.actions), [])
         let allActions = List(actionsFromUpdates).concat(this._localStoredActions)
-        this.actionsToApply.set(allActions)
+        this.actionsToApply.send(allActions)
     }
 
     actionFromApp(action) {
         const actionWithId = Object.assign({id: PersistentStoreController.newId()}, action)
         this._actionsFromApp = this._actionsFromApp.push(actionWithId)
-        this.actionToStore.set(actionWithId)
+        this.actionToStore.send(actionWithId)
     }
 
     localStoredActions(actions) {
@@ -63,8 +62,8 @@ class PersistentStoreController {
     }
 
     updateStoredRemote(update) {
-        this.updateToStoreLocal.set(update)
-        this.actionsToDelete.set(update.actions)
+        this.updateToStoreLocal.send(update)
+        this.actionsToDelete.send(update.actions)
     }
 
     remoteStoreAvailable(isAvailable) {
@@ -77,7 +76,7 @@ class PersistentStoreController {
     _sendUpdateToStoreRemote() {
         const actions = this._localStoredActions
         if (actions.size && this._remoteStoreAvailable) {
-            this.updateToStoreRemote.set(PersistentStoreController.newUpdate(actions))
+            this.updateToStoreRemote.send(PersistentStoreController.newUpdate(actions))
         }
     }
 }

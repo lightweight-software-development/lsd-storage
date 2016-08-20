@@ -1,22 +1,14 @@
-const uuid = require('node-uuid')
-
-const ObservableData = require('lsd-observable').ObservableData
+const {ObservableEvent, bindFunctions} = require('lsd-observable')
 const PersistentStoreController = require('./PersistentStoreController')
-
-function newId() {
-    return uuid.v4()
-}
 
 module.exports = class PersistentStore {
 
     constructor(localStore, remoteStore) {
         this.localStore = localStore
         this.remoteStore = remoteStore
-        this.externalAction = new ObservableData()
-        this.dispatchedAction = new ObservableData()
+        this.externalAction = new ObservableEvent()
         this.controller = new PersistentStoreController()
-        this.dispatchAction = this.dispatchAction.bind(this)
-
+        bindFunctions(this)
         this._assembleComponents()
     }
 
@@ -25,15 +17,13 @@ module.exports = class PersistentStore {
     }
 
     dispatchAction(action) {
-        const storedAction = Object.assign({id: newId()}, action)
-        this.dispatchedAction.value = storedAction;
+        this.controller.actionFromApp(action);
     }
 
     _assembleComponents() {
         const {localStore, remoteStore, controller} = this;
 
-        controller.actionsToApply.sendFlatTo(this.externalAction.set)
-        this.dispatchedAction.sendTo(controller.actionFromApp)
+        controller.actionsToApply.sendFlatTo(this.externalAction)
 
         controller.actionToStore.sendTo(localStore.storeAction)
         localStore.allActions.sendTo(controller.localStoredActions)
