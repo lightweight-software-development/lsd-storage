@@ -1,4 +1,4 @@
-const {ObservableValue, ObservableEvent} = require('lsd-observable')
+const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
 
 class SynchronizingStore {
 
@@ -6,8 +6,7 @@ class SynchronizingStore {
         this.state = new ObservableValue(initialState)
         this.dispatches = new ObservableEvent()
 
-        this._updateState = this._updateState.bind(this)
-        this.applyAction = this.applyAction.bind(this)
+        bindFunctions(this)
     }
 
     get appState() {

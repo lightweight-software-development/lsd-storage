@@ -3,10 +3,10 @@ const JsonUtil = require('../json/JsonUtil')
 
 class LocalStorageUpdateStore {
 
-    constructor(appId, dataSet) {
+    constructor(appId, dataSet, storage = window.localStorage) {
         this.actionStoreKey = `${appId}.${dataSet}.actions`
         this.updateStoreKey = `${appId}.${dataSet}.updates`
-        this.storage = window.localStorage
+        this.storage = storage
         this.allActions = new ObservableValue(this._getFromStorage(this.actionStoreKey))
         this.allUpdates = new ObservableValue(this._getFromStorage(this.updateStoreKey))
         bindFunctions(this)

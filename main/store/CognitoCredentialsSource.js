@@ -1,10 +1,5 @@
-require('aws-sdk/dist/aws-sdk')
-const root = (typeof self === 'object' && self.self === self && self) ||
-    (typeof global === 'object' && global.global === global && global) ||
-    this
-
-const AWS = root.AWS
-
+const {requireAWS} = require('../util/Util')
+const AWS = requireAWS()
 const {ObservableEvent, bindFunctions} = require('lsd-observable')
 
 class CognitoCredentialsSource {

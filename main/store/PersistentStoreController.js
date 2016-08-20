@@ -1,7 +1,7 @@
 const uuid = require('node-uuid')
 const {List} = require('immutable')
 
-const {ObservableEvent} = require('lsd-observable')
+const {ObservableEvent, bindFunctions} = require('lsd-observable')
 
 class PersistentStoreController {
 
@@ -30,12 +30,7 @@ class PersistentStoreController {
         this.actionsToDelete = new ObservableEvent()
         this.updateToStoreRemote = new ObservableEvent()
 
-        this.init = this.init.bind(this)
-        this.actionFromApp = this.actionFromApp.bind(this)
-        this.localStoredActions = this.localStoredActions.bind(this)
-        this.localStoredUpdates = this.localStoredUpdates.bind(this)
-        this.updateStoredRemote = this.updateStoredRemote.bind(this)
-        this.remoteStoreAvailable = this.remoteStoreAvailable.bind(this)
+        bindFunctions(this)
     }
 
 

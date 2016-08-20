@@ -1,9 +1,5 @@
-require('aws-sdk/dist/aws-sdk')
-const root = (typeof self === 'object' && self.self === self && self) ||
-    (typeof global === 'object' && global.global === global && global) ||
-    this
-
-const AWS = root.AWS
+const {requireAWS} = require('../util/Util')
+const AWS = requireAWS()
 const {ObservableValue, ObservableEvent} = require('lsd-observable')
 
 
@@ -24,7 +20,7 @@ module.exports = class S3UpdateStore {
         const prefix = this.keyPrefix ? this.keyPrefix + '/' : ''
         const key = prefix + this.appId + '/' + this.dataSet + '/' + update.id
         this._storeInS3(key, JSON.stringify(update))
-            .then( () => this.updateStored.set(update) )
+            .then( () => this.updateStored.send(update) )
             .then( () => console.log('Update stored', update.id))
             .catch( e => console.error('Failed after sending update', e) )
     }
