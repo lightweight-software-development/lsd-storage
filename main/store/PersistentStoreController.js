@@ -45,6 +45,7 @@ class PersistentStoreController {
         const actionWithId = Object.assign({id: PersistentStoreController.newId()}, action)
         this._actionsFromApp = this._actionsFromApp.push(actionWithId)
         this.actionToStore.send(actionWithId)
+        this.actionsToApply.send([actionWithId])
     }
 
     localStoredActions(actions) {

@@ -44,16 +44,17 @@ describe("Persistent store controller", function () {
         controller.actionToStore.latestEvent.id.should.not.be.null
     })
 
-    it("stores actions from app", function () {
+    it("stores actions from app and sends back to state controller", function () {
         controller.actionFromApp(action1)
         controller.actionToStore.latestEvent.should.containSubset(action1)
+        controller.actionsToApply.latestEvent.should.containSubset([action1])
         const testAction1WithId = controller.actionToStore.latestEvent
 
         controller.localStoredActions([testAction1WithId])
 
         controller.actionFromApp(action2)
         controller.actionToStore.latestEvent.should.containSubset(action2)
-        const testAction2WithId = controller.actionToStore.latestEvent
+        controller.actionsToApply.latestEvent.should.containSubset([action2])
     })
 
     it("stores actions from app when they are added to the local store and sent back to controller synchronously", function () {

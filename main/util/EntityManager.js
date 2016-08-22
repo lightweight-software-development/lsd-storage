@@ -19,7 +19,7 @@ module.exports = class EntityManager {
 
     save(entity) {
         const entityWithId = entity.id ? entity : entity.merge({id: uuid.v4()})
-        this.appStore.updateAndSave(this.saveFunction, entityWithId)
+        this.appStore.update(this.saveFunction, entityWithId)
         return entityWithId
     }
 

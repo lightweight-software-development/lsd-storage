@@ -1,10 +1,10 @@
 const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
 
-class SynchronizingStore {
+class StateController {
 
     constructor(initialState) {
         this.state = new ObservableValue(initialState)
-        this.dispatches = new ObservableEvent()
+        this.newAction = new ObservableEvent()
 
         bindFunctions(this)
     }
@@ -13,12 +13,12 @@ class SynchronizingStore {
         return this.state.value
     }
 
-    updateAndSave(methodName, ...args) {
-        this._updateState(methodName, args)
+    update(methodName, ...args) {
+        // this._updateState(methodName, args)
         if (args.length > 1) {
             throw new Error("Cannot handle multiple arguments yet: " + args)        // TODO  handle multiple arguments
         }
-        this.dispatches.send({type: methodName, data: args[0]})
+        this.newAction.send({type: methodName, data: args[0]})
     }
 
     _updateState(methodName, args) {
@@ -40,4 +40,4 @@ class SynchronizingStore {
 
 }
 
-module.exports = SynchronizingStore
+module.exports = StateController
