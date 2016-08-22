@@ -36,7 +36,7 @@
   - Persistent store applies actions from all locally stored updates to state controller
   - Then Persistent store requests updates from remote store shared area (if available) and applies actions to state controller and deletes from local store
   - Then Persistent store applies actions from local store to state controller and notifies if any invalid
-  - Then Persistent store sends update to remote store user area with all valid outstanding actions
+  - Then if valid outstanding actions, Persistent store sends update to remote store user area (if available) with all valid outstanding actions
 
 - New action from view
   - State controller notifies new action to persistent store

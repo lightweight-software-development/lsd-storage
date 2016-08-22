@@ -5,7 +5,7 @@
   "scripts": {
     "build": "babel main -d dist",
     "build-dev": "npm update lsd-observable && npm run build && npm version prerelease --no-git-tag",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --recursive --ui bdd test"
   },
   "main": "dist/index.js",
   "dependencies": {

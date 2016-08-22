@@ -24,6 +24,7 @@ describe("Persistent store", function () {
     const [testAction1, testAction2, testAction3] = ["One", "Two", "Three"].map(testAction)
     const appName = "testapp"
     const dataSet = "testdata"
+    const actionsKey = `${appName}.${dataSet}.actions`
     let store, localStore, mockStorage
 
     beforeEach("set up app", function () {
@@ -39,7 +40,7 @@ describe("Persistent store", function () {
 
     it("stores dispatched action locally if remote store not available", function () {
         store.dispatchAction(testAction1)
-        JSON.parse(mockStorage.getItem("testapp.testdata.actions")).should.containSubset([testAction1])
+        mockStorage.getData(actionsKey).should.containSubset([testAction1])
     })
 })
 
@@ -50,4 +51,6 @@ class MockLocalStorage {
 
     getItem(key) { return this.items.get(key)}
     setItem(key, value) { this.items.set(key, value)}
+
+    getData(key) { return JSON.parse(this.getItem(key))}
 }

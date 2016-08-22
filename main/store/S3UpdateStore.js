@@ -1,19 +1,20 @@
 const {requireAWS} = require('../util/Util')
 const AWS = requireAWS()
-const {ObservableValue, ObservableEvent} = require('lsd-observable')
+const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
 
 
 module.exports = class S3UpdateStore {
 
     constructor(bucketName, keyPrefix, appId, dataSet, credentialsSource) {
         Object.assign(this, {bucketName, keyPrefix, appId, dataSet})
-        credentialsSource.credentialsAvailable.sendTo( this.credentialsAvailable.bind(this) )
 
         this.updateStored = new ObservableEvent()
         this.storeAvailable = new ObservableValue(false)
 
-        this.storeUpdate = this.storeUpdate.bind(this)
+        bindFunctions(this)
+
         AWS.config.region = 'eu-west-1'
+        credentialsSource.credentialsAvailable.sendTo( this.credentialsAvailable )
     }
 
     storeUpdate(update) {
@@ -25,7 +26,11 @@ module.exports = class S3UpdateStore {
             .catch( e => console.error('Failed after sending update', e) )
     }
 
-    getUpdates() {
+    requestUpdates() {
+
+    }
+
+    _getUpdates() {
         const {s3, bucketName} = this
         if (!s3) return Promise.resolve([])
 

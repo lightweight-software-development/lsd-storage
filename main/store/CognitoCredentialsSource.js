@@ -1,12 +1,12 @@
 const {requireAWS} = require('../util/Util')
 const AWS = requireAWS()
-const {ObservableEvent, bindFunctions} = require('lsd-observable')
+const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
 
 class CognitoCredentialsSource {
 
     constructor(identityPoolId) {
         this.identityPoolId = identityPoolId
-        this.credentialsAvailable = new ObservableEvent()
+        this.credentialsAvailable = new ObservableValue()
         this.credentialsInvalid = new ObservableEvent()
         bindFunctions(this)
     }

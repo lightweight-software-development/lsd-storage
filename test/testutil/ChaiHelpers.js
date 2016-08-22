@@ -7,7 +7,8 @@ function jsEqual(chai, utils) {
     var Assertion = chai.Assertion;
 
     Assertion.addMethod('jsEql', function (expected) {
-        new Assertion(this._obj.toJS()).to.eql(expected);
+        const value = this._obj.toJS ? this._obj.toJS() : this._obj
+        new Assertion(value).to.eql(expected);
     });
 }
 
@@ -15,7 +16,8 @@ function jsMatch(chai, utils) {
     var Assertion = chai.Assertion;
 
     Assertion.addMethod('jsMatch', function (expected) {
-        new Assertion(this._obj.toJS()).to.containSubset(expected);
+        const value = this._obj.toJS ? this._obj.toJS() : this._obj
+        new Assertion(value).to.containSubset(expected);
     });
 }
 

@@ -20,11 +20,23 @@ function update(actions) {
     return PersistentStoreController.newUpdate(actions)
 }
 
+function capture(eventSource) {
+    const events = []
+    eventSource.sendTo(x => events.push(x))
+    return events
+}
+
+function captureFlat(eventSource) {
+    const events = []
+    eventSource.sendFlatTo(x => events.push(x))
+    return events
+}
+
 describe("Persistent store controller", function () {
     this.timeout(100)
 
     const [action1, action2, action3] = ["One", "Two", "Three"].map(testAction)
-    const [savedAction1, savedAction2, savedAction3] = ["One", "Two", "Three"].map(testActionWithId)
+    const [savedAction1, savedAction2, savedAction3, savedAction4, savedAction5] = ["One", "Two", "Three", "Four", "Five"].map(testActionWithId)
 
     let controller
 
@@ -32,125 +44,175 @@ describe("Persistent store controller", function () {
         controller = new PersistentStoreController()
     })
 
-    it("no action to store if none from app", function () {
-        should.not.exist(controller.actionToStore.latestEvent)
-        controller.localStoredActions([savedAction1])
-        should.not.exist(controller.actionToStore.latestEvent)
+    describe("On action from app", function () {
+
+        it("stores actions from app and requests updates and does not request again until received and sends action to app when updates received", function () {
+            const updatesRequested = capture(controller.updatesRequested)
+
+            controller.actionFromApp(action1)
+            controller.actionToStore.latestEvent.should.containSubset(action1)
+            controller.actionToStore.latestEvent.id.should.not.be.null
+            updatesRequested.length.should.eql(1)
+            should.not.exist(controller.actionsToApply.latestEvent)
+
+            const testAction1WithId = controller.actionToStore.latestEvent
+            controller.localStoredActions([testAction1WithId])
+
+            controller.actionFromApp(action2)
+            controller.actionToStore.latestEvent.should.containSubset(action2)
+            updatesRequested.length.should.eql(1)
+            should.not.exist(controller.actionsToApply.latestEvent)
+
+            const testAction2WithId = controller.actionToStore.latestEvent
+            controller.localStoredActions([testAction1WithId, testAction2WithId])
+
+            controller.remoteUpdates([])
+            controller.actionsToApply.latestEvent.should.jsEql([testAction1WithId, testAction2WithId])
+
+
+            controller.actionFromApp(action3)
+            controller.actionToStore.latestEvent.should.containSubset(action3)
+            updatesRequested.length.should.eql(2)
+            controller.actionsToApply.latestEvent.should.jsEql([testAction1WithId, testAction2WithId])
+        })
     })
 
-    it("stores action from app with id", function () {
-        controller.actionFromApp(action1)
-        controller.actionToStore.latestEvent.should.containSubset(action1)
-        controller.actionToStore.latestEvent.id.should.not.be.null
+    describe("On Startup", function () {
+        it("if offline: sends actions from local stored updates then requests updates from store", function () {
+            const actionsOutput = []
+            controller.remoteStoreAvailable(false)
+            controller.actionsToApply.sendFlatTo(x => actionsOutput.push(x))
+
+            controller.localStoredActions([savedAction1, savedAction2])
+            controller.localStoredUpdates([update([savedAction3, savedAction4]), update([savedAction5])])
+            should.not.exist(controller.actionsToApply.latestEvent)
+            actionsOutput.should.be.empty
+
+            controller.init()
+            controller.actionsToApply.latestEvent.should.jsMatch([savedAction3, savedAction4, savedAction5])
+            actionsOutput.should.eql([savedAction3, savedAction4, savedAction5])
+            controller.updatesRequested.latestEvent.should.eql(true)
+        })
+
+        it("if online: sends actions from local stored updates then requests updates from store", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            controller.remoteStoreAvailable(true)
+
+            controller.localStoredActions([savedAction1, savedAction2])
+            controller.localStoredUpdates([update([savedAction3, savedAction4]), update([savedAction5])])
+            should.not.exist(controller.actionsToApply.latestEvent)
+            actionsOutput.should.be.empty
+
+            controller.init()
+            controller.actionsToApply.latestEvent.should.jsMatch([savedAction3, savedAction4, savedAction5])
+            actionsOutput.should.eql([savedAction3, savedAction4, savedAction5])
+            controller.updatesRequested.latestEvent.should.eql(true)
+        })
+
     })
 
-    it("stores actions from app and sends back to state controller", function () {
-        controller.actionFromApp(action1)
-        controller.actionToStore.latestEvent.should.containSubset(action1)
-        controller.actionsToApply.latestEvent.should.containSubset([action1])
-        const testAction1WithId = controller.actionToStore.latestEvent
+    describe("Remote store available", function () {
+        it("When becomes available Starts sync by request updates", function () {
+            controller.remoteStoreAvailable(false)
+            controller.localStoredActions([savedAction1, savedAction2])
 
-        controller.localStoredActions([testAction1WithId])
+            controller.remoteStoreAvailable(true)
+            should.not.exist(controller.actionsToApply.latestEvent)
+            controller.updatesRequested.latestEvent.should.eql(true)
+        })
 
-        controller.actionFromApp(action2)
-        controller.actionToStore.latestEvent.should.containSubset(action2)
-        controller.actionsToApply.latestEvent.should.containSubset([action2])
+        it("When becomes unavailable does nothing", function () {
+            controller.remoteStoreAvailable(true)
+            controller.localStoredActions([savedAction1, savedAction2])
+
+            const updatesRequested = capture(controller.updatesRequested)
+            controller.remoteStoreAvailable(false)
+            should.not.exist(controller.actionsToApply.latestEvent)
+            updatesRequested.length.should.be.empty
+        })
     })
 
-    it("stores actions from app when they are added to the local store and sent back to controller synchronously", function () {
-        const actionsStored = []
-        controller.actionToStore.sendTo( x => {actionsStored.push(x); controller.localStoredActions(actionsStored)} )
+    describe("Update check requested", function () {
+        it("Starts sync by request updates even if remote store unavailable", function () {
+            controller.remoteStoreAvailable(false)
+            controller.localStoredActions([savedAction1, savedAction2])
 
-        controller.actionFromApp(action1)
-        controller.actionFromApp(action2)
-
-        actionsStored.should.containSubset([action1, action2])
+            controller.checkForUpdates()
+            should.not.exist(controller.actionsToApply.latestEvent)
+            controller.updatesRequested.latestEvent.should.eql(true)
+        })
     })
 
-    it("on startup sends actions from local stored updates to actions to apply", function () {
-        const actionsOutput = []
-        controller.actionsToApply.sendFlatTo( x => actionsOutput.push(x) )
+    describe("On remoteUpdates", function () {
+        it("saves updates, applies actions from updates and deletes them from local store, applies other local actions, sends updates with outstanding actions if store available", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            const actionsDeleted = captureFlat(controller.actionsToDelete)
+            const updatesStored = capture(controller.updateToStoreLocal)
+            const updates = [update([savedAction3, savedAction4]), update([savedAction5])]
 
-        controller.localStoredUpdates([update([savedAction1, savedAction2]), update([savedAction3])])
-        should.not.exist(controller.actionsToApply.latestEvent)
-        actionsOutput.should.be.empty
+            controller.localStoredActions([savedAction1, savedAction2])
+            controller.remoteStoreAvailable(true)
+            controller.remoteUpdates(updates)
 
-        controller.init()
-        controller.actionsToApply.latestEvent.should.jsMatch([savedAction1, savedAction2, savedAction3])
-        actionsOutput.should.eql([savedAction1, savedAction2, savedAction3])
-    })
+            updatesStored.should.eql(updates)
+            actionsOutput.should.eql([savedAction3, savedAction4, savedAction5, savedAction1, savedAction2])
+            actionsDeleted.should.eql([savedAction3, savedAction4, savedAction5])
+            controller.actionsToApply.latestEvent.toJS().should.eql([savedAction1, savedAction2])
+            controller.actionsToDelete.latestEvent.should.eql([savedAction5])
+            const storedUpdate = controller.updateToStoreRemote.latestEvent
+            storedUpdate.actions.toJS().should.eql([savedAction1, savedAction2])
+            storedUpdate.id.should.not.be.null
+        })
 
-    it("on startup sends actions from local stored actions to actions to apply", function () {
-        const actionsOutput = []
-        controller.actionsToApply.sendFlatTo( x => actionsOutput.push(x) )
+        it("after empty updates: applies other local actions, sends update with outstanding actions if store available", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            const actionsDeleted = captureFlat(controller.actionsToDelete)
+            const updatesStored = capture(controller.updateToStoreLocal)
 
-        controller.localStoredActions([savedAction1, savedAction2])
-        should.not.exist(controller.actionsToApply.latestEvent)
-        actionsOutput.should.be.empty
+            controller.localStoredActions([savedAction1, savedAction2])
+            controller.remoteStoreAvailable(true)
+            controller.remoteUpdates([])
 
-        controller.init()
-        controller.actionsToApply.latestEvent.should.jsMatch([savedAction1, savedAction2])
-        actionsOutput.should.eql([savedAction1, savedAction2])
-    })
+            updatesStored.should.eql([])
+            actionsOutput.should.eql([savedAction1, savedAction2])
+            actionsDeleted.should.eql([])
+            controller.actionsToApply.latestEvent.toJS().should.eql([savedAction1, savedAction2])
+            controller.updateToStoreRemote.latestEvent.actions.toJS().should.eql([savedAction1, savedAction2])
+        })
 
+        it("after any updates: applies other local actions, does not sends update if store not available", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            const actionsDeleted = captureFlat(controller.actionsToDelete)
+            const updatesStored = capture(controller.updateToStoreLocal)
 
-    it("on startup sends actions from local stored updates then local stored actions to actions to apply", function () {
-        const actionsOutput = []
-        controller.actionsToApply.sendFlatTo( x => actionsOutput.push(x) )
+            controller.localStoredActions([savedAction1, savedAction2])
+            controller.remoteStoreAvailable(false)
+            controller.remoteUpdates([])
 
-        controller.localStoredActions([savedAction1])
-        controller.localStoredUpdates([update([savedAction2, savedAction3])])
-        should.not.exist(controller.actionsToApply.latestEvent)
-        actionsOutput.should.be.empty
+            updatesStored.should.eql([])
+            actionsOutput.should.eql([savedAction1, savedAction2])
+            actionsDeleted.should.eql([])
+            controller.actionsToApply.latestEvent.toJS().should.eql([savedAction1, savedAction2])
+            should.not.exist(controller.updateToStoreRemote.latestEvent)
+        })
 
-        controller.init()
-        controller.actionsToApply.latestEvent.should.jsMatch([savedAction2, savedAction3, savedAction1])
-        actionsOutput.should.eql([savedAction2, savedAction3, savedAction1])
-    })
+        it("after any updates: does not sends update if no local actions", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            const actionsDeleted = captureFlat(controller.actionsToDelete)
+            const updatesStored = capture(controller.updateToStoreLocal)
+            const updates = [update([savedAction3, savedAction4])]
 
-    it("sends update to remote store once only when local stored actions with store already available", function () {
-        controller.remoteStoreAvailable(true)
-        should.not.exist(controller.updateToStoreRemote.latestEvent)
+            controller.localStoredActions([])
+            controller.remoteStoreAvailable(true)
+            controller.remoteUpdates(updates)
 
-        controller.localStoredActions([action1, action2])
-        const storedUpdate = controller.updateToStoreRemote.latestEvent
-        storedUpdate.actions.should.jsMatch([action1, action2])
-        storedUpdate.id.should.not.be.null
-    })
-
-    it("sends update to remote store once only when store becomes available", function () {
-        controller.localStoredActions([action1, action2])
-        should.not.exist(controller.updateToStoreRemote.latestEvent)
-
-        controller.remoteStoreAvailable(true)
-        const storedUpdate = controller.updateToStoreRemote.latestEvent
-        storedUpdate.actions.should.jsMatch([action1, action2])
-    })
-
-    it("sends no update to remote store when local stored actions removed", function () {
-        const updatesSent = []
-        controller.updateToStoreRemote.sendTo( x => {updatesSent.push(x)} )
-
-        controller.localStoredActions([action1, action2])
-        controller.remoteStoreAvailable(true)
-        const storedUpdate = updatesSent[0]
-        storedUpdate.actions.should.jsMatch([action1, action2])
-
-        controller.updateStoredRemote(storedUpdate)
-        updatesSent.length.should.eql(1)
-
-        controller.localStoredActions()
-        updatesSent.length.should.eql(1)
-    })
-
-    it("sends ids to delete and update to local store once only when update stored in remote and changes synchronous", function () {
-        let deletedActions, updateToStore
-        controller.actionsToDelete.sendTo( (actions) => { deletedActions = actions; controller.localStoredActions([])  })
-        controller.updateToStoreLocal.sendTo( (update) => { updateToStore = update; controller.localStoredUpdates([update])  })
-
-        controller.updateStoredRemote(update([savedAction1, savedAction2]))
-        deletedActions.should.eql([savedAction1, savedAction2])
-        updateToStore.actions.should.containSubset([savedAction1, savedAction2])
+            updatesStored.should.eql(updates)
+            actionsOutput.should.eql([savedAction3, savedAction4])
+            actionsDeleted.should.eql([savedAction3, savedAction4])
+            controller.actionsToApply.latestEvent.should.jsEql([savedAction3, savedAction4])
+            controller.actionsToDelete.latestEvent.should.eql([savedAction3, savedAction4])
+            should.not.exist(controller.updateToStoreRemote.latestEvent)
+        })
     })
 
 })
