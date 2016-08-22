@@ -10,7 +10,7 @@ module.exports = class S3UpdateStore {
 
         this.updateStored = new ObservableEvent()
         this.storeAvailable = new ObservableValue(false)
-
+        this.incomingUpdates = new ObservableEvent()
         bindFunctions(this)
 
         AWS.config.region = 'eu-west-1'
@@ -27,7 +27,7 @@ module.exports = class S3UpdateStore {
     }
 
     requestUpdates() {
-
+        this._getUpdates().then( (updates) => this.incomingUpdates.send(updates) )
     }
 
     _getUpdates() {
@@ -39,7 +39,7 @@ module.exports = class S3UpdateStore {
         }
 
         function getObjectBody(key) {
-            return s3.getObjectBody({Key: key}).promise().then( data => data.Body )
+            return s3.getObject({Bucket: bucketName, Key: key}).promise().then( data => data.Body )
         }
 
         function getObjectsForKeys(keys) {
@@ -68,7 +68,9 @@ module.exports = class S3UpdateStore {
     }
 
     credentialsAvailable(credentials) {
-        AWS.config.credentials = credentials;
+        if (typeof credentials === "object") {
+            AWS.config.credentials = credentials;
+        }
 
         this.s3 = new AWS.S3()
         this.storeAvailable.value = true

@@ -23,6 +23,7 @@ class PersistentStoreController {
         this._localStoredActions = new List()
         this._localStoredUpdates = new List()
         this._remoteStoreAvailable = false
+        this._started = false
 
         // outgoing data
         this.actionToStore = new ObservableEvent()
@@ -38,8 +39,11 @@ class PersistentStoreController {
     // Incoming
     init() {
         const actionsFromUpdates = this._localStoredUpdates.reduce((acc, val) => acc.concat(val.actions), [])
-        this.actionsToApply.send(actionsFromUpdates)
+        if (actionsFromUpdates.length) {
+            this.actionsToApply.send(actionsFromUpdates)
+        }
         this._requestUpdates()
+        this._started = true
         // if (this._remoteStoreAvailable) {
         // } else {
         //     this.actionsToApply.send(this._localStoredActions)
@@ -59,7 +63,6 @@ class PersistentStoreController {
 
     localStoredActions(actions) {
         this._localStoredActions = List(actions)
-        this._sendUpdateToStoreRemote()
     }
 
     localStoredUpdates(updates) {
@@ -73,7 +76,7 @@ class PersistentStoreController {
 
     remoteStoreAvailable(isAvailable) {
         this._remoteStoreAvailable = isAvailable
-        if (isAvailable) {
+        if (this._started && isAvailable) {
             this._requestUpdates()
         }
     }
@@ -81,9 +84,11 @@ class PersistentStoreController {
     remoteUpdates(updates) {
         this._updatesRequestInFlight = false
         updates.forEach( u => {
-            this.updateToStoreLocal.send(u)
-            this.actionsToApply.send(u.actions)
-            this.actionsToDelete.send(u.actions)
+            if (!this._inLocalStoredUpdates(u)) {
+                this.updateToStoreLocal.send(u)
+                this.actionsToApply.send(u.actions)
+                this.actionsToDelete.send(u.actions)
+            }
         })
         if (this._localStoredActions.size) {
             this.actionsToApply.send(this._localStoredActions)
@@ -91,6 +96,9 @@ class PersistentStoreController {
         this._sendUpdateToStoreRemote()
     }
 
+    _inLocalStoredUpdates(update) {
+        return !!this._localStoredUpdates.find( u => u.id === update.id )
+    }
 
     // Outgoing
     _sendUpdateToStoreRemote() {

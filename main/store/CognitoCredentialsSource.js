@@ -18,7 +18,7 @@ class CognitoCredentialsSource {
                 'accounts.google.com': authResponse.id_token
             }
         })
-        this.credentialsAvailable.send(credentials)
+        this.credentialsAvailable.value = credentials
     }
 
     signOut() {

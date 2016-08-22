@@ -1,7 +1,7 @@
 const chai = require('chai')
 const PersistentStoreController = require('../../main/store/PersistentStoreController')
 const {jsEqual, jsMatch} = require('../testutil/ChaiHelpers')
-
+const {capture, captureFlat} = require('../testutil/Helpers')
 
 const should = chai.should()
 chai.use(jsEqual)
@@ -20,20 +20,7 @@ function update(actions) {
     return PersistentStoreController.newUpdate(actions)
 }
 
-function capture(eventSource) {
-    const events = []
-    eventSource.sendTo(x => events.push(x))
-    return events
-}
-
-function captureFlat(eventSource) {
-    const events = []
-    eventSource.sendFlatTo(x => events.push(x))
-    return events
-}
-
 describe("Persistent store controller", function () {
-    this.timeout(100)
 
     const [action1, action2, action3] = ["One", "Two", "Three"].map(testAction)
     const [savedAction1, savedAction2, savedAction3, savedAction4, savedAction5] = ["One", "Two", "Three", "Four", "Five"].map(testActionWithId)
@@ -112,13 +99,24 @@ describe("Persistent store controller", function () {
     })
 
     describe("Remote store available", function () {
-        it("When becomes available Starts sync by request updates", function () {
+        it("When becomes available after init Starts sync by request updates", function () {
             controller.remoteStoreAvailable(false)
             controller.localStoredActions([savedAction1, savedAction2])
+            controller.init()
 
             controller.remoteStoreAvailable(true)
             should.not.exist(controller.actionsToApply.latestEvent)
             controller.updatesRequested.latestEvent.should.eql(true)
+        })
+
+        it("When becomes available before init does nothing", function () {
+            controller.remoteStoreAvailable(false)
+            controller.localStoredActions([savedAction1, savedAction2])
+
+            const updatesRequested = capture(controller.updatesRequested)
+            controller.remoteStoreAvailable(true)
+            should.not.exist(controller.actionsToApply.latestEvent)
+            updatesRequested.length.should.be.empty
         })
 
         it("When becomes unavailable does nothing", function () {
@@ -162,6 +160,23 @@ describe("Persistent store controller", function () {
             const storedUpdate = controller.updateToStoreRemote.latestEvent
             storedUpdate.actions.toJS().should.eql([savedAction1, savedAction2])
             storedUpdate.id.should.not.be.null
+        })
+
+        it("ignores updates already in local store", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            const actionsDeleted = captureFlat(controller.actionsToDelete)
+            const updatesStored = capture(controller.updateToStoreLocal)
+            const updateA = update([savedAction3, savedAction4])
+            const updateB = update([savedAction5])
+
+            controller.localStoredUpdates([updateA])
+            controller.remoteStoreAvailable(true)
+            controller.remoteUpdates([updateA, updateB])
+
+            updatesStored.should.eql([updateB])
+            actionsOutput.should.eql([savedAction5])
+            actionsDeleted.should.eql([savedAction5])
+            should.not.exist(controller.updateToStoreRemote.latestEvent)
         })
 
         it("after empty updates: applies other local actions, sends update with outstanding actions if store available", function () {

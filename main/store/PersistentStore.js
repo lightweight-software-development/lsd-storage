@@ -35,5 +35,7 @@ module.exports = class PersistentStore {
         controller.updateToStoreRemote.sendTo(remoteStore.storeUpdate)
         remoteStore.updateStored.sendTo(controller.updateStoredRemote)
 
+        controller.updatesRequested.sendTo(remoteStore.requestUpdates)
+        remoteStore.incomingUpdates.sendTo(controller.remoteUpdates)
     }
 }
