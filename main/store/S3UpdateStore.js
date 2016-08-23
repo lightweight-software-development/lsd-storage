@@ -15,6 +15,7 @@ module.exports = class S3UpdateStore {
 
         AWS.config.region = 'eu-west-1'
         credentialsSource.credentialsAvailable.sendTo( this.credentialsAvailable )
+        credentialsSource.credentialsInvalid.sendTo(this.credentialsInvalid)
     }
 
     storeUpdate(update) {
@@ -74,7 +75,14 @@ module.exports = class S3UpdateStore {
 
         this.s3 = new AWS.S3()
         this.storeAvailable.value = true
-        console.log('Logged in.');
+        console.log('S3UpdateStore Logged in.');
+    }
+
+    credentialsInvalid() {
+        this.s3 = null
+        this.storeAvailable.value = false
+        console.log('S3UpdateStore Logged out');
+
     }
 
 }

@@ -5,10 +5,12 @@ const PersistentStoreController = require('../../main/store/PersistentStoreContr
 const LocalStorageUpdateStore = require('../../main/store/LocalStorageUpdateStore')
 const AccessKeyCredentialsSource = require('../../main/store/AccessKeyCredentialsSource')
 const S3UpdateStore = require('../../main/store/S3UpdateStore')
-const {capture, captureFlat, waitFor} = require('../testutil/Helpers')
+const {capture, captureFlat, waitFor, waitForPromise} = require('../testutil/Helpers')
 const {requireAWS} = require('../../main/util/Util')
 const AWS = requireAWS()
 const uuid = require('node-uuid')
+const _ = require('lodash')
+const fs = require('fs')
 
 
 chai.should()
@@ -18,9 +20,9 @@ function testAction(name) {
     return {type: 'TEST', data: {name}}
 }
 
-function testActionWithId(name) {
+function testActionWithId(name, index) {
     id = uuid.v4()
-    return {id, type: 'TEST', data: {name}}
+    return {id, type: 'TEST', data: {name, index}}
 }
 
 function update(actions) {
@@ -28,15 +30,18 @@ function update(actions) {
 }
 
 describe("Persistent store", function () {
-    this.timeout(50000)
+    this.timeout(10000)
 
-    const testBucket = process.env.TEST_BUCKET
-    const testAccessKey = process.env.TEST_ACCESS_KEY
-    const testSecretKey = process.env.TEST_SECRET_KEY
+    const {testBucket, testAccessKey, testSecretKey} = JSON.parse(fs.readFileSync('./.testConfig.json'))
+    // const testBucket = process.env.TEST_BUCKET
+    // const testAccessKey = process.env.TEST_ACCESS_KEY
+    // const testSecretKey = process.env.TEST_SECRET_KEY
+    console.log("testBucket", testBucket)
+    console.log("testAccessKey", testAccessKey)
 
     const [testAction1, testAction2, testAction3] = ["One", "Two", "Three"].map(testAction)
-    const [savedAction1, savedAction2, savedAction3, savedAction4, savedAction5] = ["One", "Two", "Three", "Four", "Five"].map(testActionWithId)
-    const [savedAction6, savedAction7, savedAction8, savedAction9, savedAction10] = ["Six", "Seven", "Eight", "Nine", "Ten"].map(testActionWithId)
+    const [savedAction1, savedAction2, savedAction3, savedAction4, savedAction5, savedAction6, savedAction7, savedAction8, savedAction9, savedAction10]
+        = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"].map(testActionWithId)
 
     const updateA = update([savedAction1, savedAction2])
     const updateB = update([savedAction3])
@@ -46,7 +51,7 @@ describe("Persistent store", function () {
     const dataSet = "testdata"
     const actionsKey = `${appName}.${dataSet}.actions`
     const updatesKey = `${appName}.${dataSet}.updates`
-    let store, localStore, mockStorage, remoteStore, testS3Store
+    let store, localStore, mockStorage, credentialsSource, remoteStore, testS3Store
 
     function createPersistentStore() {
         localStore = new LocalStorageUpdateStore(appName, dataSet, mockStorage)
@@ -56,18 +61,14 @@ describe("Persistent store", function () {
     beforeEach("set up app", function () {
         mockStorage = new MockLocalStorage()
 
-        const credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
+        credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
         remoteStore = new S3UpdateStore(testBucket, 'updates', appName, dataSet, credentialsSource)
 
         testS3Store = new TestS3Store(testBucket, "updates", appName, dataSet)
-
+        return testS3Store.clearUpdates().then( () => testS3Store.storeUpdates(updateA, updateB, updateC) )
     })
 
     describe("On startup", function () {
-
-        beforeEach("set up s3 store", function () {
-            return testS3Store.clearUpdates().then( () => testS3Store.storeUpdates(updateA, updateB, updateC) )
-        })
 
         it("loads local updates, loads new remote updates, loads local actions, stores local actions in an update", function () {
             mockStorage.setData(updatesKey, [updateA])
@@ -82,16 +83,22 @@ describe("Persistent store", function () {
                 return externalActions.length === 7
             }, 2000)
                 .then(function () {
-                    new Set(externalActions).should.eql(new Set([savedAction1, savedAction2, savedAction3, savedAction4, savedAction5, savedAction6, savedAction7]))
+                    return waitFor( () => mockStorage.getData(actionsKey).length === 0, 2000 )
                 })
-
-                // .then(function () {
-                //     return waitFor( s3Storage.getUpdates().then( (updates) => updates.length === 4 ))
-                // })
+                .then(function () {
+                    return waitFor( () => testS3Store.getUpdates().then( updates => updates.length === 4 ), 2000)
+                        .then( () => testS3Store.getUpdates().then( updates => updates[3].actions.should.eql([savedAction6, savedAction7])))
+                })
+                .then(function () {
+                    const sortedActions = _.sortBy(externalActions, a => a.data.index)
+                    sortedActions.should.eql([savedAction1, savedAction2, savedAction3, savedAction4, savedAction5, savedAction6, savedAction7])
+                })
         })
     })
 
     it("stores dispatched action locally if remote store not available", function () {
+        createPersistentStore()
+        credentialsSource.signOut()
         store.dispatchAction(testAction1)
         mockStorage.getData(actionsKey).should.containSubset([testAction1])
     })
@@ -123,7 +130,7 @@ class TestS3Store {
         }
 
         function getObjectBody(key) {
-            return s3.getObjectBody({Key: key}).promise().then( data => data.Body )
+            return s3.getObject({Bucket: bucketName, Key: key}).promise().then( data => data.Body )
         }
 
         function getObjectsForKeys(keys) {
