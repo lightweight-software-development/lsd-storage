@@ -52,7 +52,7 @@ module.exports = class S3UpdateStore {
             return objectBodies.map( b => JSON.parse(b) )
         }
 
-        return getUpdateKeys().then( getObjectsForKeys ).then( asUpdates ).catch( e => {console.error('Error getting updates', e); return []} )
+        return getUpdateKeys().then( getObjectsForKeys ).then( asUpdates ).catch( e => {console.error('S3UpdateStore: Error getting updates', e); return []} )
     }
 
     _storeInS3(key, objectContent) {

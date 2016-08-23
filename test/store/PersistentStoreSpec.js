@@ -58,6 +58,10 @@ describe("Persistent store", function () {
         store = new PersistentStore(localStore, remoteStore)
     }
 
+    function storedUpdates(...updates) {
+        return testS3Store.clearUpdates().then(() => testS3Store.storeUpdates(...updates))
+    }
+
     beforeEach("set up app", function () {
         mockStorage = new MockLocalStorage()
 
@@ -65,43 +69,87 @@ describe("Persistent store", function () {
         remoteStore = new S3UpdateStore(testBucket, 'updates', appName, dataSet, credentialsSource)
 
         testS3Store = new TestS3Store(testBucket, "updates", appName, dataSet)
-        return testS3Store.clearUpdates().then( () => testS3Store.storeUpdates(updateA, updateB, updateC) )
     })
 
     describe("On startup", function () {
 
-        it("loads local updates, loads new remote updates, loads local actions, stores local actions in an update", function () {
+        it("online: loads local updates, loads new remote updates, loads local actions, stores local actions in an update", function () {
+            return storedUpdates(updateA, updateB, updateC).then(function () {
+                mockStorage.setData(updatesKey, [updateA])
+                mockStorage.setData(actionsKey, [savedAction6, savedAction7])
+                createPersistentStore()
+
+                const externalActions = capture(store.externalAction)
+                store.init()
+
+                return waitFor(() => {
+                    // console.log( externalActions )
+                    return externalActions.length === 7
+                }, 2000)
+                    .then(function () {
+                        return waitFor(() => mockStorage.getData(actionsKey).length === 0, 2000)
+                    })
+                    .then(function () {
+                        return waitFor(() => testS3Store.getUpdates().then(updates => updates.length === 4), 2000)
+                            .then(() => testS3Store.getUpdates().then(updates => updates[3].actions.should.eql([savedAction6, savedAction7])))
+                    })
+                    .then(function () {
+                        const sortedActions = _.sortBy(externalActions, a => a.data.index)
+                        sortedActions.should.eql([savedAction1, savedAction2, savedAction3, savedAction4, savedAction5, savedAction6, savedAction7])
+                    })
+
+            })
+        })
+
+        it("offline: loads local updates, loads local actions", function () {
             mockStorage.setData(updatesKey, [updateA])
             mockStorage.setData(actionsKey, [savedAction6, savedAction7])
             createPersistentStore()
+            credentialsSource.signOut()
 
             const externalActions = capture(store.externalAction)
             store.init()
 
             return waitFor(() => {
                 // console.log( externalActions )
-                return externalActions.length === 7
+                return externalActions.length === 4
             }, 2000)
                 .then(function () {
-                    return waitFor( () => mockStorage.getData(actionsKey).length === 0, 2000 )
-                })
-                .then(function () {
-                    return waitFor( () => testS3Store.getUpdates().then( updates => updates.length === 4 ), 2000)
-                        .then( () => testS3Store.getUpdates().then( updates => updates[3].actions.should.eql([savedAction6, savedAction7])))
-                })
-                .then(function () {
                     const sortedActions = _.sortBy(externalActions, a => a.data.index)
-                    sortedActions.should.eql([savedAction1, savedAction2, savedAction3, savedAction4, savedAction5, savedAction6, savedAction7])
+                    sortedActions.should.eql([savedAction1, savedAction2, savedAction6, savedAction7])
                 })
         })
     })
 
-    it("stores dispatched action locally if remote store not available", function () {
-        createPersistentStore()
-        credentialsSource.signOut()
-        store.dispatchAction(testAction1)
-        mockStorage.getData(actionsKey).should.containSubset([testAction1])
+    describe("On new action from view", function () {
+        it("online: loads new remote updates, stores dispatched action in an update, sends action to state", function () {
+            return storedUpdates(/*none*/).then(function () {
+                createPersistentStore()
+                store.init()
+                const externalActions = capture(store.externalAction)
+
+                return storedUpdates(updateA)
+                    .then(() => {
+                        store.dispatchAction(testAction1)
+                        return waitFor(() => externalActions.length === 3, 2000)
+                    })
+                    .then(() => waitFor(() => mockStorage.getData(actionsKey).length === 0, 2000))
+                    .then(() => waitFor(() => testS3Store.getUpdates().then(updates => updates.length === 2), 2000))
+                    .then(() => testS3Store.getUpdates().then(updates => updates[1].actions.should.containSubset([testAction1])))
+                    .then(() => externalActions.should.containSubset([savedAction1, savedAction2, testAction1]))
+            })
+        })
+
+        it("offline: stores dispatched action locally", function (done) {
+            createPersistentStore()
+            credentialsSource.signOut()
+            store.dispatchAction(testAction1)
+            mockStorage.getData(actionsKey).should.containSubset([testAction1])
+            done()
+        })
+
     })
+
 })
 
 class MockLocalStorage {
@@ -109,11 +157,21 @@ class MockLocalStorage {
         this.items = new Map()
     }
 
-    getItem(key) { return this.items.get(key)}
-    setItem(key, value) { this.items.set(key, value)}
+    getItem(key) {
+        return this.items.get(key)
+    }
 
-    getData(key) { return JSON.parse(this.getItem(key))}
-    setData(key, value) { this.setItem(key, JSON.stringify(value)) }
+    setItem(key, value) {
+        this.items.set(key, value)
+    }
+
+    getData(key) {
+        return JSON.parse(this.getItem(key))
+    }
+
+    setData(key, value) {
+        this.setItem(key, JSON.stringify(value))
+    }
 }
 
 class TestS3Store {
@@ -126,34 +184,41 @@ class TestS3Store {
         const {s3, bucketName} = this
 
         function getUpdateKeys() {
-            return s3.listObjectsV2({ Bucket: bucketName }).promise().then( listData => listData.Contents.map( x => x.Key ))
+            return s3.listObjectsV2({Bucket: bucketName}).promise().then(listData => listData.Contents.map(x => x.Key))
         }
 
         function getObjectBody(key) {
-            return s3.getObject({Bucket: bucketName, Key: key}).promise().then( data => data.Body )
+            return s3.getObject({Bucket: bucketName, Key: key}).promise().then(data => data.Body)
         }
 
         function getObjectsForKeys(keys) {
-            const promises = keys.map( getObjectBody )
+            const promises = keys.map(getObjectBody)
             return Promise.all(promises)
         }
 
         function asUpdates(objectBodies) {
-            return objectBodies.map( b => JSON.parse(b) )
+            return objectBodies.map(b => JSON.parse(b))
         }
 
-        return getUpdateKeys().then( getObjectsForKeys ).then( asUpdates ).catch( e => {console.error('Error getting updates', e); return []} )
+        return getUpdateKeys().then(getObjectsForKeys).then(asUpdates).catch(e => {
+            console.error('TestS3Store: Error getting updates', e);
+            return []
+        })
     }
 
     clearUpdates() {
         const {s3, bucketName} = this
 
         function getUpdateKeys() {
-            return s3.listObjectsV2({ Bucket: bucketName }).promise().then( listData => listData.Contents.map( x => x.Key ))
+            return s3.listObjectsV2({Bucket: bucketName}).promise().then(listData => listData.Contents.map(x => x.Key))
         }
 
         function deleteObjectsForKeys(keys) {
-            const keysToDelete = keys.map( k => ({Key: k}) )
+            if (!keys.length) {
+                console.log("TestS3Store: Bucket empty nothing to delete")
+                return
+            }
+            const keysToDelete = keys.map(k => ({Key: k}))
 
             const params = {
                 Bucket: bucketName,
@@ -164,14 +229,17 @@ class TestS3Store {
             return s3.deleteObjects(params).promise()
         }
 
-        return getUpdateKeys().then( deleteObjectsForKeys ).catch( e => {console.error('Error getting updates', e); return []} )
+        return getUpdateKeys().then(deleteObjectsForKeys).catch(e => {
+            console.error('TestS3Store: Error clearing updates', e);
+            return []
+        })
     }
 
     storeUpdate(update) {
         const prefix = this.keyPrefix ? this.keyPrefix + '/' : ''
         const key = prefix + this.appId + '/' + this.dataSet + '/' + update.id
         return this._storeInS3(key, JSON.stringify(update))
-            .catch( e => console.error('Failed after sending update', e) )
+            .catch(e => console.error('Failed after sending update', e))
     }
 
     storeUpdates(...updates) {
