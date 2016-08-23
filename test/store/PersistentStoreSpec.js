@@ -1,5 +1,6 @@
 const chai = require('chai')
 const chaiSubset = require('chai-subset')
+const JsonUtil = require('../../main/json/JsonUtil')
 const PersistentStore = require('../../main/store/PersistentStore')
 const PersistentStoreController = require('../../main/store/PersistentStoreController')
 const LocalStorageUpdateStore = require('../../main/store/LocalStorageUpdateStore')
@@ -16,13 +17,27 @@ const fs = require('fs')
 chai.should()
 chai.use(chaiSubset)
 
-function testAction(name) {
-    return {type: 'TEST', data: {name}}
+class TestItem {
+    constructor(name, index) {
+        this.name = name
+        this.index = index
+    }
+
+    toJSON() {
+        return {"@type": this.constructor.name, name: this.name, index: this.index}
+    }
+
+}
+
+JsonUtil.registerClass(TestItem)
+
+function testAction(name, index = 0) {
+    return {type: 'TEST', data: new TestItem(name, index)}
 }
 
 function testActionWithId(name, index) {
     id = uuid.v4()
-    return {id, type: 'TEST', data: {name, index}}
+    return {id, type: 'TEST', data: new TestItem(name, index)}
 }
 
 function update(actions) {
@@ -33,9 +48,6 @@ describe("Persistent store", function () {
     this.timeout(10000)
 
     const {testBucket, testAccessKey, testSecretKey} = JSON.parse(fs.readFileSync('./.testConfig.json'))
-    // const testBucket = process.env.TEST_BUCKET
-    // const testAccessKey = process.env.TEST_ACCESS_KEY
-    // const testSecretKey = process.env.TEST_SECRET_KEY
     console.log("testBucket", testBucket)
     console.log("testAccessKey", testAccessKey)
 
@@ -96,6 +108,7 @@ describe("Persistent store", function () {
                     .then(function () {
                         const sortedActions = _.sortBy(externalActions, a => a.data.index)
                         sortedActions.should.eql([savedAction1, savedAction2, savedAction3, savedAction4, savedAction5, savedAction6, savedAction7])
+                        sortedActions.forEach( a => a.data.should.be.instanceof(TestItem) )
                     })
 
             })
@@ -218,11 +231,11 @@ class MockLocalStorage {
     }
 
     getData(key) {
-        return JSON.parse(this.getItem(key))
+        return JsonUtil.fromStore(this.getItem(key))
     }
 
     setData(key, value) {
-        this.setItem(key, JSON.stringify(value))
+        this.setItem(key, JsonUtil.toStore(value))
     }
 }
 
@@ -236,7 +249,7 @@ class TestS3Store {
         const {s3, bucketName} = this
 
         function getUpdateKeys() {
-            return s3.listObjectsV2({Bucket: bucketName}).promise().then(listData => listData.Contents.map(x => x.Key))
+            return s3.listObjectsV2({Bucket: bucketName}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
         }
 
         function getObjectBody(key) {
@@ -249,7 +262,7 @@ class TestS3Store {
         }
 
         function asUpdates(objectBodies) {
-            return objectBodies.map(b => JSON.parse(b))
+            return objectBodies.map(b => JsonUtil.fromStore(b))
         }
 
         return getUpdateKeys().then(getObjectsForKeys).then(asUpdates).catch(e => {
@@ -288,15 +301,20 @@ class TestS3Store {
     }
 
     storeUpdate(update) {
-        const prefix = this.keyPrefix ? this.keyPrefix + '/' : ''
-        const key = prefix + this.appId + '/' + this.dataSet + '/' + update.id
-        return this._storeInS3(key, JSON.stringify(update))
+        const key = this._folderKey() + update.id
+        return this._storeInS3(key, JsonUtil.toStore(update))
             .catch(e => console.error('Failed after sending update', e))
     }
 
     storeUpdates(...updates) {
-        const promises = updates.map(u => this.storeUpdate(u))
+        const folderPromise = this._storeInS3(this._folderKey(), '')
+        const promises = updates.map(u => this.storeUpdate(u)).concat(folderPromise)
         return Promise.all(promises)
+    }
+
+    _folderKey() {
+        const prefix = this.keyPrefix ? this.keyPrefix + '/' : ''
+        return prefix + this.appId + '/' + this.dataSet + '/'
     }
 
     _storeInS3(key, objectContent) {

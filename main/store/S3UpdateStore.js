@@ -1,6 +1,7 @@
 const {requireAWS} = require('../util/Util')
 const AWS = requireAWS()
 const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
+const JsonUtil = require('../json/JsonUtil')
 
 
 module.exports = class S3UpdateStore {
@@ -14,21 +15,21 @@ module.exports = class S3UpdateStore {
         bindFunctions(this)
 
         AWS.config.region = 'eu-west-1'
-        credentialsSource.credentialsAvailable.sendTo( this.credentialsAvailable )
+        credentialsSource.credentialsAvailable.sendTo(this.credentialsAvailable)
         credentialsSource.credentialsInvalid.sendTo(this.credentialsInvalid)
     }
 
     storeUpdate(update) {
         const prefix = this.keyPrefix ? this.keyPrefix + '/' : ''
         const key = prefix + this.appId + '/' + this.dataSet + '/' + update.id
-        this._storeInS3(key, JSON.stringify(update))
-            .then( () => this.updateStored.send(update) )
-            .then( () => console.log('Update stored', update.id))
-            .catch( e => console.error('Failed after sending update', e) )
+        this._storeInS3(key, JsonUtil.toStore(update))
+            .then(() => this.updateStored.send(update))
+            .then(() => console.log('Update stored', update.id))
+            .catch(e => console.error('Failed after sending update', e))
     }
 
     requestUpdates() {
-        this._getUpdates().then( (updates) => this.incomingUpdates.send(updates) )
+        this._getUpdates().then((updates) => this.incomingUpdates.send(updates))
     }
 
     _getUpdates() {
@@ -36,23 +37,30 @@ module.exports = class S3UpdateStore {
         if (!s3) return Promise.resolve([])
 
         function getUpdateKeys() {
-            return s3.listObjectsV2({ Bucket: bucketName }).promise().then( listData => listData.Contents.map( x => x.Key ))
+            return s3.listObjectsV2({Bucket: bucketName}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
         }
 
         function getObjectBody(key) {
-            return s3.getObject({Bucket: bucketName, Key: key}).promise().then( data => data.Body )
+            return s3.getObject({Bucket: bucketName, Key: key}).promise()
+                .then(data => {
+                    const b = data.Body
+                    try {
+                        return JsonUtil.fromStore(b)
+                    } catch (e) {
+                        throw new Error(`${e.message} Key: ${key}  Body: ${b}`)
+                    }
+                })
         }
 
         function getObjectsForKeys(keys) {
-            const promises = keys.map( getObjectBody )
+            const promises = keys.map(getObjectBody)
             return Promise.all(promises)
         }
 
-        function asUpdates(objectBodies) {
-            return objectBodies.map( b => JSON.parse(b) )
-        }
-
-        return getUpdateKeys().then( getObjectsForKeys ).then( asUpdates ).catch( e => {console.error('S3UpdateStore: Error getting updates', e); return []} )
+        return getUpdateKeys().then(getObjectsForKeys).catch(e => {
+            console.error('S3UpdateStore: Error getting updates', e);
+            return []
+        })
     }
 
     _storeInS3(key, objectContent) {
@@ -65,7 +73,7 @@ module.exports = class S3UpdateStore {
             Body: objectContent
         }
 
-        return this.s3.putObject(params).promise().catch( e => console.warn('Failed to send update', e) )
+        return this.s3.putObject(params).promise().catch(e => console.warn('Failed to send update', e))
     }
 
     credentialsAvailable(credentials) {
