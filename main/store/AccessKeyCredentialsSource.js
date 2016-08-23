@@ -8,6 +8,12 @@ class AccessKeyCredentialsSource {
         this.credentialsAvailable = new ObservableValue()
         this.credentialsInvalid = new ObservableEvent()
         bindFunctions(this)
+        if (accessKey && secretKey) {
+            this.signIn(accessKey, secretKey)
+        }
+    }
+
+    signIn(accessKey, secretKey) {
         AWS.config.update({accessKeyId: accessKey, secretAccessKey: secretKey})
         this.credentialsAvailable.value = true
     }

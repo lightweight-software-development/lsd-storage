@@ -5,7 +5,7 @@
   "scripts": {
     "build": "babel main -d dist",
     "build-dev": "npm update lsd-observable && npm run build && npm version prerelease --no-git-tag",
-    "test": "source .test_env_vars && mocha --recursive --ui bdd test"
+    "test": "mocha --recursive --ui bdd test"
   },
   "main": "dist/index.js",
   "dependencies": {

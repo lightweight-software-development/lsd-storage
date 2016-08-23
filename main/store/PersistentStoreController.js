@@ -1,5 +1,5 @@
 const uuid = require('node-uuid')
-const {List} = require('immutable')
+const {List, Set} = require('immutable')
 
 const {ObservableEvent, bindFunctions} = require('lsd-observable')
 
@@ -19,7 +19,7 @@ class PersistentStoreController {
 
     constructor() {
         this._updatesRequestInFlight = false
-        this._actionsFromApp = new List()
+        this._actionIdsApplied = new Set()
         this._localStoredActions = new List()
         this._localStoredUpdates = new List()
         this._remoteStoreAvailable = false
@@ -44,15 +44,10 @@ class PersistentStoreController {
         }
         this._requestUpdates()
         this._started = true
-        // if (this._remoteStoreAvailable) {
-        // } else {
-        //     this.actionsToApply.send(this._localStoredActions)
-        // }
     }
 
     actionFromApp(action) {
         const actionWithId = Object.assign({id: PersistentStoreController.newId()}, action)
-        this._actionsFromApp = this._actionsFromApp.push(actionWithId)
         this.actionToStore.send(actionWithId)
         this._requestUpdates()
     }
@@ -83,7 +78,7 @@ class PersistentStoreController {
 
     remoteUpdates(updates) {
         this._updatesRequestInFlight = false
-        updates.forEach( u => {
+        updates.forEach(u => {
             if (!this._inLocalStoredUpdates(u)) {
                 this.updateToStoreLocal.send(u)
                 this.actionsToApply.send(u.actions)
@@ -91,13 +86,13 @@ class PersistentStoreController {
             }
         })
         if (this._localStoredActions.size) {
-            this.actionsToApply.send(this._localStoredActions)
+            this._sendNewActionsToApp(this._localStoredActions)
         }
         this._sendUpdateToStoreRemote()
     }
 
     _inLocalStoredUpdates(update) {
-        return !!this._localStoredUpdates.find( u => u.id === update.id )
+        return !!this._localStoredUpdates.find(u => u.id === update.id)
     }
 
     // Outgoing
@@ -113,6 +108,12 @@ class PersistentStoreController {
             this.updatesRequested.send(true)
             this._updatesRequestInFlight = true
         }
+    }
+
+    _sendNewActionsToApp(actions) {
+        const unsentActions = actions.filter(x => !this._actionIdsApplied.has(x.id))
+        this.actionsToApply.send(unsentActions)
+        this._actionIdsApplied = this._actionIdsApplied.union(unsentActions.map(x => x.id))
     }
 }
 

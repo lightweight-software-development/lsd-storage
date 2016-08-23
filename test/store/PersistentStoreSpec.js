@@ -140,14 +140,66 @@ describe("Persistent store", function () {
             })
         })
 
-        it("offline: stores dispatched action locally", function (done) {
+        it("offline: stores dispatched action locally and sends to state", function () {
             createPersistentStore()
             credentialsSource.signOut()
+            store.init()
+            const externalActions = capture(store.externalAction)
             store.dispatchAction(testAction1)
             mockStorage.getData(actionsKey).should.containSubset([testAction1])
-            done()
+
+            return waitFor(() => externalActions.length === 1, 2000)
         })
 
+    })
+
+    describe("On check for updates", function () {
+        it("online: loads new remote updates", function () {
+            return storedUpdates(/*none*/).then(function () {
+                createPersistentStore()
+                store.init()
+                const externalActions = capture(store.externalAction)
+
+                return storedUpdates(updateA)
+                    .then(() => {
+                        store.checkForUpdates()
+                        return waitFor(() => externalActions.length === 2, 2000)
+                    })
+                    .then(() => externalActions.should.containSubset([savedAction1, savedAction2]))
+            })
+        })
+
+        it("offline: does nothing", function () {
+            createPersistentStore()
+            credentialsSource.signOut()
+            store.init()
+            const externalActions = capture(store.externalAction)
+            store.checkForUpdates()
+            externalActions.should.have.lengthOf(0)
+        })
+
+    })
+
+    describe("When Store becomes available", function () {
+        it("loads new remote updates, stores dispatched action in an update, does not send action to state again", function () {
+            return storedUpdates(/*none*/).then(function () {
+                createPersistentStore()
+                credentialsSource.signOut()
+                store.init()
+                const externalActions = capture(store.externalAction)
+
+                return storedUpdates(updateA)
+                    .then(() => {
+                        store.dispatchAction(testAction1)
+                        return waitFor(() => externalActions.length === 1, 2000)
+                    })
+                    .then(() => credentialsSource.signIn(testAccessKey, testSecretKey))
+                    .then(() => waitFor(() => mockStorage.getData(actionsKey).length === 0, 2000))
+                    .then(() => waitFor(() => testS3Store.getUpdates().then(updates => updates.length === 2), 2000))
+                    .then(() => testS3Store.getUpdates().then(updates => updates[1].actions.should.containSubset([testAction1])))
+                    .then(() => externalActions.should.have.lengthOf(3).and.containSubset([testAction1, savedAction1, savedAction2]))
+            })
+        })
     })
 
 })
@@ -215,7 +267,7 @@ class TestS3Store {
 
         function deleteObjectsForKeys(keys) {
             if (!keys.length) {
-                console.log("TestS3Store: Bucket empty nothing to delete")
+                // console.log("TestS3Store: Bucket empty nothing to delete")
                 return
             }
             const keysToDelete = keys.map(k => ({Key: k}))

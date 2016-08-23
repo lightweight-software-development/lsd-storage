@@ -179,6 +179,22 @@ describe("Persistent store controller", function () {
             should.not.exist(controller.updateToStoreRemote.latestEvent)
         })
 
+        it("ignores actions in local store sent to app while store not available", function () {
+            const actionsOutput = captureFlat(controller.actionsToApply)
+            const actionsDeleted = captureFlat(controller.actionsToDelete)
+            const remoteUpdatesStored = capture(controller.updateToStoreRemote)
+
+            controller.remoteStoreAvailable(false)
+            controller.localStoredActions([savedAction1, savedAction2])
+
+            controller.remoteUpdates([])
+            controller.remoteStoreAvailable(true)
+            controller.remoteUpdates([])
+
+            remoteUpdatesStored.length.should.eql(1)
+            actionsOutput.length.should.eql(2)
+        })
+
         it("after empty updates: applies other local actions, sends update with outstanding actions if store available", function () {
             const actionsOutput = captureFlat(controller.actionsToApply)
             const actionsDeleted = captureFlat(controller.actionsToDelete)
@@ -211,7 +227,7 @@ describe("Persistent store controller", function () {
             should.not.exist(controller.updateToStoreRemote.latestEvent)
         })
 
-        it("after any updates: does not sends update if no local actions", function () {
+        it("after any updates: does not send update if no local actions", function () {
             const actionsOutput = captureFlat(controller.actionsToApply)
             const actionsDeleted = captureFlat(controller.actionsToDelete)
             const updatesStored = capture(controller.updateToStoreLocal)

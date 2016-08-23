@@ -75,13 +75,13 @@ module.exports = class S3UpdateStore {
 
         this.s3 = new AWS.S3()
         this.storeAvailable.value = true
-        console.log('S3UpdateStore Logged in.');
+        // console.log('S3UpdateStore Logged in.');
     }
 
     credentialsInvalid() {
         this.s3 = null
         this.storeAvailable.value = false
-        console.log('S3UpdateStore Logged out');
+        // console.log('S3UpdateStore Logged out');
 
     }
 
