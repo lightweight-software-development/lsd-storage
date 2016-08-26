@@ -3,7 +3,7 @@ const chaiSubset = require('chai-subset')
 const JsonUtil = require('../../main/json/JsonUtil')
 const PersistentStore = require('../../main/store/PersistentStore')
 const PersistentStoreController = require('../../main/store/PersistentStoreController')
-const UpdateStore = require('../../main/store/UpdateStore')
+const LocalUpdateStore = require('../../main/store/LocalUpdateStore')
 const AccessKeyCredentialsSource = require('../../main/store/AccessKeyCredentialsSource')
 const S3UpdateStore = require('../../main/store/S3UpdateStore')
 const {capture, captureFlat, waitFor, waitForPromise} = require('../testutil/Helpers')
@@ -63,7 +63,7 @@ describe("Persistent store in browser", function () {
     let store, localStore, localData, credentialsSource, remoteStore, testS3Store
 
     function createPersistentStore() {
-        localStore = new UpdateStore(localData)
+        localStore = new LocalUpdateStore(localData)
         store = new PersistentStore(localStore, remoteStore)
     }
 

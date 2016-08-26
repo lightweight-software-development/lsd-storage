@@ -1,16 +1,18 @@
-const UpdateStore = require('./UpdateStore')
+const {bindFunctions} = require('lsd-observable')
+const LocalUpdateStore = require('./LocalUpdateStore')
 const JsonUtil = require('../json/JsonUtil')
 
 class LocalStorageStore {
 
     constructor(appId, dataSet) {
         Object.assign(this, {appId, dataSet})
+        this.storage = window.localStorage
         this.actionStoreKey = `${appId}.${dataSet}.actions`
         this.updateStoreKey = `${appId}.${dataSet}.updates`
     }
 
     get actions() {
-        this._getFromStorage(this.actionStoreKey)
+        return this._getFromStorage(this.actionStoreKey)
     }
 
     set actions(actions) {
@@ -18,7 +20,7 @@ class LocalStorageStore {
     }
 
     get updates() {
-        this._getFromStorage(this.updateStoreKey)
+        return this._getFromStorage(this.updateStoreKey)
     }
 
     set updates(updates) {
@@ -37,11 +39,28 @@ class LocalStorageStore {
     }
 }
 
-class LocalStorageUpdateStore extends UpdateStore {
+class LocalStorageUpdateStore  {
 
     constructor(appId, dataSet) {
-        super(new LocalStorageStore(appId, dataSet))
+        this.localUpdateStore = new LocalUpdateStore(new LocalStorageStore(appId, dataSet))
+        bindFunctions(this)
     }
+
+    get allActions() { return this.localUpdateStore.allActions }
+    get allUpdates() { return this.localUpdateStore.allUpdates }
+
+    storeAction(action) {
+        this.localUpdateStore.storeAction(action)
+    }
+
+    deleteActions(actions) {
+        this.localUpdateStore.deleteActions(actions)
+    }
+
+    storeUpdate(update) {
+        this.localUpdateStore.storeUpdate(update)
+    }
+
 }
 
 module.exports = LocalStorageUpdateStore

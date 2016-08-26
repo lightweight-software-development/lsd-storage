@@ -1,6 +1,8 @@
 module.exports = {
+    AccessKeyCredentialsSource: require('./store/AccessKeyCredentialsSource'),
     CognitoCredentialsSource: require('./store/CognitoCredentialsSource'),
     LocalStorageUpdateStore: require('./store/LocalStorageUpdateStore'),
+    LocalUpdateStore: require('./store/LocalUpdateStore'),
     PersistentStore: require('./store/PersistentStore'),
     PersistentStoreController: require('./store/PersistentStoreController'),
     S3UpdateStore: require('./store/S3UpdateStore'),

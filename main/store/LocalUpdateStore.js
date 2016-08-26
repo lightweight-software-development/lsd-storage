@@ -1,6 +1,6 @@
 const {ObservableValue, bindFunctions} = require('lsd-observable')
 
-class UpdateStore {
+class LocalUpdateStore {
 
     constructor(storage) {
         this.storage = storage || { actions: [], updates: [] }
@@ -17,14 +17,16 @@ class UpdateStore {
     deleteActions(actions) {
         const deletedIds = new Set(actions.map( a => a.id))
         const updatedActions = this.allActions.value.filter( a => !deletedIds.has(a.id) )
-        this.allActions.value = this.storage.actions = updatedActions
+        this.storage.actions = updatedActions
+        this.allActions.value = updatedActions
     }
 
     storeUpdate(update) {
         const updatedUpdates = this.allUpdates.value.concat(update)
-        this.allUpdates.value = this.storage.updates = updatedUpdates
+        this.allUpdates.value = updatedUpdates
+        this.storage.updates = updatedUpdates
     }
 
 }
 
-module.exports = UpdateStore
+module.exports = LocalUpdateStore
