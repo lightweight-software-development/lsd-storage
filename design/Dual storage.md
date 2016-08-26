@@ -30,7 +30,7 @@
     - State
 
 
-## Events - Browser client
+## Events - Browser 
 
 - Startup
   - Persistent store applies actions from all locally stored updates to state controller
@@ -55,7 +55,8 @@
   - Persistent store requests updates from remote store shared area (if available) and applies actions to state controller and deletes from local store
 
 
-## Events - Remote Updater
+## Events - Server
+Component that gets incoming actions eg from the user areas is outside the persistent store - like the view in the browser
 
 - Startup
   -  Persistent store requests updates from remote store shared area and applies actions to state controller
@@ -66,5 +67,5 @@
   - Then Persistent store requests updates from remote store shared area and applies actions to state controller
   - Then Persistent store applies actions from local store to state controller and notifies if any invalid
     - State controller updates state
-  - Persistent store sends update to remote store user area with valid new action
+  - Persistent store sends update to remote store shared area with valid new action
 

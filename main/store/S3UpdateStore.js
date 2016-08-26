@@ -6,8 +6,8 @@ const JsonUtil = require('../json/JsonUtil')
 
 module.exports = class S3UpdateStore {
 
-    constructor(bucketName, keyPrefix, appId, dataSet, credentialsSource) {
-        Object.assign(this, {bucketName, keyPrefix, appId, dataSet})
+    constructor(bucketName, writeArea, readArea, appId, dataSet, credentialsSource) {
+        Object.assign(this, {bucketName, writeArea, readArea, appId, dataSet})
 
         this.updateStored = new ObservableEvent()
         this.storeAvailable = new ObservableValue(false)
@@ -20,8 +20,8 @@ module.exports = class S3UpdateStore {
     }
 
     storeUpdate(update) {
-        const prefix = this.keyPrefix ? this.keyPrefix + '/' : ''
-        const key = prefix + this.appId + '/' + this.dataSet + '/' + update.id
+        const {appId, dataSet, writeArea} = this
+        const key = `${appId}/${dataSet}/${writeArea}/${update.id}`
         this._storeInS3(key, JsonUtil.toStore(update))
             .then(() => this.updateStored.send(update))
             .then(() => console.log('Update stored', update.id))
@@ -33,11 +33,12 @@ module.exports = class S3UpdateStore {
     }
 
     _getUpdates() {
-        const {s3, bucketName} = this
+        const {s3, bucketName, appId, dataSet, readArea} = this
         if (!s3) return Promise.resolve([])
 
         function getUpdateKeys() {
-            return s3.listObjectsV2({Bucket: bucketName}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
+            const prefix = `${appId}/${dataSet}/${readArea}`
+            return s3.listObjectsV2({Bucket: bucketName, Prefix: prefix}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
         }
 
         function getObjectBody(key) {
@@ -90,7 +91,6 @@ module.exports = class S3UpdateStore {
         this.s3 = null
         this.storeAvailable.value = false
         // console.log('S3UpdateStore Logged out');
-
     }
 
 }
