@@ -1,31 +1,29 @@
-const {ObservableValue, bindFunctions} = require('lsd-observable')
+const UpdateStore = require('./UpdateStore')
 const JsonUtil = require('../json/JsonUtil')
 
-class LocalStorageUpdateStore {
+class LocalStorageStore {
 
-    constructor(appId, dataSet, storage = window.localStorage) {
+    constructor(appId, dataSet) {
+        Object.assign(this, {appId, dataSet})
         this.actionStoreKey = `${appId}.${dataSet}.actions`
         this.updateStoreKey = `${appId}.${dataSet}.updates`
-        this.storage = storage
-        this.allActions = new ObservableValue(this._getFromStorage(this.actionStoreKey))
-        this.allUpdates = new ObservableValue(this._getFromStorage(this.updateStoreKey))
-        bindFunctions(this)
     }
 
-    storeAction(action) {
-        const updatedActions = this.allActions.value.concat(action)
-        this.allActions.value = this._writeToStorage(this.actionStoreKey, updatedActions)
+    get actions() {
+        this._getFromStorage(this.actionStoreKey)
     }
 
-    deleteActions(actions) {
-        const deletedIds = new Set(actions.map( a => a.id))
-        const updatedActions = this.allActions.value.filter( a => !deletedIds.has(a.id) )
-        this.allActions.value = this._writeToStorage(this.actionStoreKey, updatedActions)
+    set actions(actions) {
+        this._writeToStorage(this.actionStoreKey, actions)
     }
 
-    storeUpdate(update) {
-        const updatedUpdates = this.allUpdates.value.concat(update)
-        this.allUpdates.value = this._writeToStorage(this.updateStoreKey, updatedUpdates)
+    get updates() {
+        this._getFromStorage(this.updateStoreKey)
+    }
+
+    set updates(updates) {
+        this._writeToStorage(this.updateStoreKey, updates)
+
     }
 
     _getFromStorage(key) {
@@ -36,6 +34,13 @@ class LocalStorageUpdateStore {
     _writeToStorage(key, data) {
         this.storage.setItem(key, JsonUtil.toStore(data))
         return data
+    }
+}
+
+class LocalStorageUpdateStore extends UpdateStore {
+
+    constructor(appId, dataSet) {
+        super(new LocalStorageStore(appId, dataSet))
     }
 }
 

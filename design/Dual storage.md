@@ -61,7 +61,7 @@ Component that gets incoming actions eg from the user areas is outside the persi
 - Startup
   -  Persistent store requests updates from remote store shared area and applies actions to state controller
   
-- New action in any remote store user area
+- New action arriving from any input mechanism (API, user store watcher)
   - State controller notifies new action to persistent store
   - Persistent store saves to local store (in memory only)
   - Then Persistent store requests updates from remote store shared area and applies actions to state controller
