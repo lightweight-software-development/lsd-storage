@@ -4,6 +4,7 @@ const _ = require('lodash')
 const JsonUtil = require('../../main/json/JsonUtil')
 
 module.exports = class TestS3Store {
+    //TODO pass in prefixes from test
     constructor(bucketName, outgoingPrefix, incomingPrefix, appId, dataSet) {
         Object.assign(this, {bucketName, outgoingPrefix, incomingPrefix, appId, dataSet})
         this.s3 = new AWS.S3()
@@ -12,7 +13,7 @@ module.exports = class TestS3Store {
     getOutgoingUpdates() {
         const {s3, bucketName, appId, dataSet, outgoingPrefix} = this
 
-        function getUpdateKeys() {
+        function getUpdateKeys() { // TODO use getKeys
             const prefix = `${appId}/${dataSet}/${outgoingPrefix}`
             return s3.listObjectsV2({Bucket: bucketName, Prefix: prefix}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
         }
@@ -34,6 +35,12 @@ module.exports = class TestS3Store {
             console.error('TestS3Store: Error getting updates', e);
             return []
         })
+    }
+
+    getKeys(folderInDataSet) {
+        const {s3, bucketName, appId, dataSet} = this
+        const prefix = `${appId}/${dataSet}/${folderInDataSet}`
+        return s3.listObjectsV2({Bucket: bucketName, Prefix: prefix}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
     }
 
     clearBucket() {

@@ -36,26 +36,43 @@ function waitFor(condition, timeout = 10000) {
     })
 }
 
-function waitForPromise(condition, timeout = 10000) {
-    return waitFor(condition, timeout)
-    // const startTime = Date.now()
-    // return new Promise(function(resolve, reject) {
-    //     function testCondition() {
-    //         condition().then( result => {
-    //             if (result) {
-    //                 resolve(result)
-    //             } else if (Date.now() - startTime > timeout) {
-    //                 reject( new Error("Timeout waiting for " + condition.toString()))
-    //             } else {
-    //                 setTimeout(testCondition, 100)
-    //             }
-    //         })
-    //     }
-    //
-    //     testCondition()
-    // })
+function waitForError(condition, timeout = 10000) {
+    const startTime = Date.now()
+    return new Promise(function(resolve, reject) {
+        function handleResult(result) {
+            if (!!result) {
+                resolve(result)
+            } else if (Date.now() - startTime > timeout) {
+                reject(new Error("Timeout waiting for " + condition.toString()))
+            } else {
+                setTimeout(testCondition, 100)
+            }
+        }
+
+        function handleError(err) {
+            if (Date.now() - startTime > timeout) {
+                reject(err)
+            } else {
+                setTimeout(testCondition, 100)
+            }
+        }
+
+        function testCondition() {
+            let result
+            try {
+                result = condition()
+                if (result instanceof Promise) {
+                    result.then(handleResult).catch(handleError)
+                } else {
+                    handleResult(result)
+                }
+            } catch(e) {
+                handleError(e)
+            }
+        }
+
+        testCondition()
+    })
 }
 
-
-
-module.exports = {capture, captureFlat, waitFor, waitForPromise}
+module.exports = {capture, captureFlat, waitFor, waitForError}

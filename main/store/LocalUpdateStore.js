@@ -11,7 +11,8 @@ class LocalUpdateStore {
 
     storeAction(action) {
         const updatedActions = this.allActions.value.concat(action)
-        this.allActions.value = this.storage.actions = updatedActions
+        this.allActions.value =  updatedActions
+        this.storage.actions = updatedActions
     }
 
     deleteActions(actions) {

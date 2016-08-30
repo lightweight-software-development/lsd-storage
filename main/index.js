@@ -1,5 +1,6 @@
 module.exports = {
     AccessKeyCredentialsSource: require('./store/AccessKeyCredentialsSource'),
+    BuiltinCredentialsSource: require('./store/BuiltinCredentialsSource'),
     CognitoCredentialsSource: require('./store/CognitoCredentialsSource'),
     LocalStorageUpdateStore: require('./store/LocalStorageUpdateStore'),
     LocalUpdateStore: require('./store/LocalUpdateStore'),
@@ -9,4 +10,5 @@ module.exports = {
     StateController: require('./store/StateController'),
     EntityManager: require('./util/EntityManager'),
     JsonUtil: require('./json/JsonUtil'),
+    Promoter: require('./promoter/Promoter'),
 }
