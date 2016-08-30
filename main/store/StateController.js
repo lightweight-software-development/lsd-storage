@@ -4,7 +4,7 @@ class StateController {
 
     constructor(initialState) {
         this.state = new ObservableValue(initialState)
-        this.newAction = new ObservableEvent()
+        this.newUpdate = new ObservableEvent()
 
         bindFunctions(this)
     }
@@ -14,30 +14,32 @@ class StateController {
     }
 
     update(methodName, ...args) {
-        // this._updateState(methodName, args)
         if (args.length > 1) {
             throw new Error("Cannot handle multiple arguments yet: " + args)        // TODO  handle multiple arguments
         }
-        this.newAction.send({type: methodName, data: args[0]})
-    }
-
-    _updateState(methodName, args) {
-        const currentState = this.state.value
-        const updateFunction = currentState[methodName]
-        if (typeof updateFunction !== 'function')  {
-            console.error( `Method ${methodName} not found on ${currentState}`)
-            return
-        }
-        this.state.value = updateFunction.apply(currentState, args)
+        this.newUpdate.send({actions: [{type: methodName, data: args[0]}] })
     }
 
     applySnapshot() {
     }
 
-    applyAction(action) {
-        this._updateState(action.type, [action.data])
-    }
+    applyUpdate(update) {
+        let state = this.state.value
 
+        function applyAction(methodName, args) {
+            const updateFunction = state[methodName]
+            if (typeof updateFunction !== 'function')  {
+                console.error( `Method ${methodName} not found on ${state}`)
+                return
+            }
+            state = updateFunction.apply(state, args)
+        }
+
+        update.actions.forEach(a => {applyAction(a.type, [a.data])} )
+        if (state !== this.state.value) {
+            this.state.value = state
+        }
+    }
 }
 
 module.exports = StateController

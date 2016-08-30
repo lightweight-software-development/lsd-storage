@@ -6,7 +6,7 @@ module.exports = class PersistentStore {
     constructor(localStore, remoteStore) {
         this.localStore = localStore
         this.remoteStore = remoteStore
-        this.externalAction = new ObservableEvent()
+        this.externalUpdate = new ObservableEvent()
         this.controller = new PersistentStoreController()
         bindFunctions(this)
         this._assembleComponents()
@@ -16,8 +16,8 @@ module.exports = class PersistentStore {
         this.controller.init()
     }
 
-    dispatchAction(action) {
-        this.controller.actionFromApp(action);
+    dispatchUpdate(update) {
+        this.controller.updateFromApp(update);
     }
 
     checkForUpdates() {
@@ -27,12 +27,12 @@ module.exports = class PersistentStore {
     _assembleComponents() {
         const {localStore, remoteStore, controller} = this;
 
-        controller.actionsToApply.sendFlatTo(this.externalAction)
+        controller.updatesToApply.sendFlatTo(this.externalUpdate)
 
-        controller.actionToStore.sendTo(localStore.storeAction)
-        localStore.allActions.sendTo(controller.localStoredActions)
+        controller.unsavedUpdateToStore.sendTo(localStore.storeUnsavedUpdate)
+        localStore.allUnsavedUpdates.sendTo(controller.localUnstoredUpdates)
         controller.updateToStoreLocal.sendTo(localStore.storeUpdate)
-        controller.actionsToDelete.sendTo(localStore.deleteActions)
+        controller.updatesToDelete.sendTo(localStore.deleteUnsavedUpdates)
         localStore.allUpdates.sendTo(controller.localStoredUpdates)
 
         remoteStore.storeAvailable.sendTo(controller.remoteStoreAvailable)

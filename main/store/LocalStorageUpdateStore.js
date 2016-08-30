@@ -7,16 +7,16 @@ class LocalStorageStore {
     constructor(appId, dataSet) {
         Object.assign(this, {appId, dataSet})
         this.storage = window.localStorage
-        this.actionStoreKey = `${appId}.${dataSet}.actions`
+        this.unsavedStoreKey = `${appId}.${dataSet}.unsavedUpdates`
         this.updateStoreKey = `${appId}.${dataSet}.updates`
     }
 
-    get actions() {
-        return this._getFromStorage(this.actionStoreKey)
+    get unsavedUpdates() {
+        return this._getFromStorage(this.unsavedStoreKey)
     }
 
-    set actions(actions) {
-        this._writeToStorage(this.actionStoreKey, actions)
+    set unsavedUpdates(updates) {
+        this._writeToStorage(this.unsavedStoreKey, updates)
     }
 
     get updates() {
@@ -46,15 +46,15 @@ class LocalStorageUpdateStore  {
         bindFunctions(this)
     }
 
-    get allActions() { return this.localUpdateStore.allActions }
+    get allUnsavedUpdates() { return this.localUpdateStore.allUnsavedUpdates }
     get allUpdates() { return this.localUpdateStore.allUpdates }
 
-    storeAction(action) {
-        this.localUpdateStore.storeAction(action)
+    storeUnsavedUpdate(update) {
+        this.localUpdateStore.storeUnsavedUpdate(update)
     }
 
-    deleteActions(actions) {
-        this.localUpdateStore.deleteActions(actions)
+    deleteUnsavedUpdates(updates) {
+        this.localUpdateStore.deleteUnsavedUpdates(updates)
     }
 
     storeUpdate(update) {

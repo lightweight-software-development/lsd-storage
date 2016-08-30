@@ -7,7 +7,12 @@ function requireAWS() {
 }
 
 const AWS = requireAWS()
-const {LocalUpdateStore, S3UpdateStore, StateController, PersistentStore, JsonUtil, BuiltinCredentialsSource} = require('lsd-storage')
+const LocalUpdateStore = require('../../main/store/LocalUpdateStore')
+const S3UpdateStore = require('../../main/store/S3UpdateStore')
+const StateController = require('../../main/store/StateController')
+const PersistentStore = require('../../main/store/PersistentStore')
+const JsonUtil = require('../../main/json/JsonUtil')
+const BuiltinCredentialsSource = require('../../main/store/BuiltinCredentialsSource')
 
 class Promoter {
 
@@ -20,8 +25,8 @@ class Promoter {
 
         this.persistentStore = new PersistentStore(localStore, remoteStore)
 
-        this.persistentStore.externalAction.sendTo(this.stateController.applyAction)
-        this.stateController.newAction.sendTo(this.persistentStore.dispatchAction)
+        this.persistentStore.externalUpdate.sendTo(this.stateController.applyAction)
+        this.stateController.newAction.sendTo(this.persistentStore.dispatchUpdate)
 
         this.persistentStore.init()
 
@@ -35,7 +40,7 @@ class Promoter {
                 const body = data.Body
                 try {
                     const update = JsonUtil.fromStore(body)
-                    update.actions.forEach( (action, index) => {
+                    update.unsavedUpdates.forEach( (action, index) => {
                         try {
                             this.stateController.update(action.type, action.data)
                         } catch (e) {

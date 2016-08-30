@@ -1,15 +1,20 @@
+const {requireAWS} = require('../util/Util')
+const AWS = requireAWS()
 const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
 
-class BuiltinCredentialsSource {
+class AccessKeyCredentialsSource {
 
-    constructor() {
+    constructor(accessKey, secretKey) {
         this.credentialsAvailable = new ObservableValue()
         this.credentialsInvalid = new ObservableEvent()
         bindFunctions(this)
-        this.signIn()
+        if (accessKey && secretKey) {
+            this.signIn(accessKey, secretKey)
+        }
     }
 
-    signIn() {
+    signIn(accessKey, secretKey) {
+        AWS.config.update({accessKeyId: accessKey, secretAccessKey: secretKey})
         this.credentialsAvailable.value = true
     }
 
@@ -18,4 +23,4 @@ class BuiltinCredentialsSource {
     }
 }
 
-module.exports = BuiltinCredentialsSource
+module.exports = AccessKeyCredentialsSource

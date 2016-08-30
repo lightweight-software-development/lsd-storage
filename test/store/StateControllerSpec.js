@@ -1,31 +1,25 @@
-let chai = require('chai'),
+const chai = require('chai'),
     chaiSubset = require('chai-subset'),
     sinon = require("sinon"),
     sinonChai = require("sinon-chai"),
     _ = require('lodash'),
     uuid = require('node-uuid'),
+    {capture, captureFlat} = require('../testutil/Helpers')
     StateController = require('../../main/store/StateController')
 
 const should = chai.should();
 chai.use(chaiSubset);
 chai.use(sinonChai);
 
-function testAction(name) {
-    return {type: 'TEST', data: {name}}
-}
-
-function testActionWithId(name, id = uuid.v4()) {
-    return {id, type: 'TEST', data: {name}}
-}
-
 describe("State controller", function () {
     this.timeout(100);
 
-    let controller, state
+    let controller, state, stateChanges
 
     beforeEach("set up", function () {
         state = new TestState(0)
         controller = new StateController(state);
+        stateChanges = capture(controller.state)
     })
 
     beforeEach("capture console messages", function() {
@@ -36,24 +30,26 @@ describe("State controller", function () {
         console.error.restore();
     })
 
-    it("sends new action when update but does not change state", function () {
+    it("sends new update when get update but does not change state", function () {
         controller.update("add", 2)
 
-        controller.newAction.latestEvent.should.eql({type: "add", data: 2})
+        controller.newUpdate.latestEvent.should.eql({actions: [{type: "add", data: 2}]})
         controller.appState.count.should.eql(0)
         controller.appState.should.equal(state)
+        stateChanges.should.have.lengthOf(1)
     })
 
-    it("applies action and changes state", function () {
-        controller.applyAction({type: "add", data: 2})
+    it("applies update and changes state after last action", function () {
+        controller.applyUpdate({actions: [{type: "add", data: 2}, {type: "add", data: 3}]})
 
-        should.not.exist(controller.newAction.latestEvent)
-        controller.appState.count.should.eql(2)
+        should.not.exist(controller.newUpdate.latestEvent)
+        controller.appState.count.should.eql(5)
         controller.appState.should.not.equal(state)
+        stateChanges.should.have.lengthOf(2)
     })
 
     it("logs error and continues if unknown action", function () {
-        controller.applyAction({type: "xxx", data: 99})
+        controller.applyUpdate({actions: [{type: "xxx", data: 2}]})
         controller.appState.should.equal(state)
 
         console.error.should.have.been.calledWith("Method xxx not found on TestState 0")

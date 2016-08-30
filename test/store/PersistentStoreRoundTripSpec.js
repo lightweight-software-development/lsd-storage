@@ -60,8 +60,8 @@ describe("App instances communicate via shared area", function () {
 
         const persistentStore = new PersistentStore(localStore, remoteStore)
 
-        persistentStore.externalAction.sendTo(app.applyAction)
-        app.newAction.sendTo(persistentStore.dispatchAction)
+        persistentStore.externalUpdate.sendTo(app.applyAction)
+        app.newAction.sendTo(persistentStore.dispatchUpdate)
 
         persistentStore.init()
 

@@ -2,6 +2,7 @@ const {requireAWS} = require('../../main/util/Util')
 const AWS = requireAWS()
 const _ = require('lodash')
 const JsonUtil = require('../../main/json/JsonUtil')
+const S3UpdateStore = require('../../main/store/S3UpdateStore')
 
 module.exports = class TestS3Store {
     //TODO pass in prefixes from test
@@ -74,8 +75,9 @@ module.exports = class TestS3Store {
 
     storeIncomingUpdate(update) {
         const content = JsonUtil.toStore(update)
-        return this._storeInS3(this._folderKey + update.id, content)
-            .then( () => this._storeInS3(this._otherFolderKey + update.id, content))
+        const bucketKey = S3UpdateStore.bucketKey(update.id)
+        return this._storeInS3(this._folderKey + bucketKey, content)
+            .then( () => this._storeInS3(this._otherFolderKey + bucketKey, content))
             .catch(e => console.error('Failed after sending update', e))
     }
 

@@ -6,6 +6,10 @@ const JsonUtil = require('../json/JsonUtil')
 
 module.exports = class S3UpdateStore {
 
+    static bucketKey(id) {
+        return Date.now() + '-' + id
+    }
+
     constructor(bucketName, writeArea, readArea, appId, dataSet, credentialsSource) {
         Object.assign(this, {bucketName, writeArea, readArea, appId, dataSet})
 
@@ -21,7 +25,7 @@ module.exports = class S3UpdateStore {
 
     storeUpdate(update) {
         const {appId, dataSet, writeArea} = this
-        const key = `${appId}/${dataSet}/${writeArea}/${update.id}`
+        const key = `${appId}/${dataSet}/${writeArea}/${S3UpdateStore.bucketKey(update.id)}`
         this._storeInS3(key, JsonUtil.toStore(update))
             .then(() => this.updateStored.send(update))
             .then(() => console.log('Update stored', update.id))
@@ -37,7 +41,7 @@ module.exports = class S3UpdateStore {
         if (!s3) return Promise.resolve([])
 
         function getUpdateKeys() {
-            const prefix = `${appId}/${dataSet}/${readArea}`
+            const prefix = `${appId}/${dataSet}/${readArea}/`
             return s3.listObjectsV2({Bucket: bucketName, Prefix: prefix}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
         }
 
