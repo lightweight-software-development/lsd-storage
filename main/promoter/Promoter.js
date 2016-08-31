@@ -1,12 +1,4 @@
-function requireAWS() {
-    if (typeof window === "object") {
-        return window.AWS
-    } else {
-        return require('aws-sdk')
-    }
-}
-
-const AWS = requireAWS()
+const AWS = require('aws-sdk')
 const LocalUpdateStore = require('../store/LocalUpdateStore')
 const S3UpdateStore = require('../store/S3UpdateStore')
 const StateController = require('../store/StateController')
@@ -15,6 +7,25 @@ const JsonUtil = require('../json/JsonUtil')
 const BuiltinCredentialsSource = require('../store/BuiltinCredentialsSource')
 
 class Promoter {
+
+    static createLambdaHandler(dataBucketNameSuffix, model, appName, dataSet) {
+        const appConfig = {appName, dataSet}
+        let promoter
+
+        function getPromoter(context) {
+            const functionNameRegex = new RegExp(`^${appName}_(.+)_.+`)
+            let env = functionNameRegex.exec(context.functionName)[1];
+
+            const bucketName = `${appName}-${env}-${dataBucketNameSuffix}`
+            return promoter || (promoter = new Promoter(bucketName, model, appConfig))
+        }
+
+        return function (event, context, callback) {
+            const key = event.Records[0].s3.object.key
+            const promoter = getPromoter(context)
+            promoter.promote(key).then(callback(key))
+        }
+    }
 
     constructor(bucketName, model, appConfig, credentialsSource = new BuiltinCredentialsSource()) {
         this.bucketName = bucketName
@@ -31,11 +42,10 @@ class Promoter {
         this.persistentStore.init()
 
         this.s3 = new AWS.S3()
-
     }
 
     promote(key) {
-        this.s3.getObject({Bucket: this.bucketName, Key: key}).promise()
+        return this.s3.getObject({Bucket: this.bucketName, Key: key}).promise()
             .then(data => {
                 const body = data.Body
                 try {

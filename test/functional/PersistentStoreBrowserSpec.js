@@ -28,7 +28,10 @@ function testUpdateWithId(name) {
 describe("Persistent store in browser", function () {
     this.timeout(10000)
 
-    const {testBucket, testAccessKey, testSecretKey} = JSON.parse(fs.readFileSync('./.testConfig.json'))
+    const {appName, testAccessKey, testSecretKey} = JSON.parse(fs.readFileSync('./.testConfig.json'))
+    const environment = "test"
+    const testBucket = `${appName}-${environment}-data`
+
     console.log("testBucket", testBucket)
     console.log("testAccessKey", testAccessKey)
 
@@ -36,7 +39,6 @@ describe("Persistent store in browser", function () {
     const [savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5, savedUpdate6, savedUpdate7]
         = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"].map(testUpdateWithId)
 
-    const appName = "testapp"
     const dataSet = "testdata"
     let store, localStore, localData, credentialsSource, remoteStore, testS3Store
     let externalUpdates
