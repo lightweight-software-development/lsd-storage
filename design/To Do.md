@@ -5,3 +5,5 @@
 - Track all actions applied, not just local
 - Updates must be applied in order
 - If find an update older than one already applied, reapply all after it
+
+- refactor waitFor

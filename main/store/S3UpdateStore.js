@@ -25,10 +25,11 @@ module.exports = class S3UpdateStore {
 
     storeUpdate(update) {
         const {appId, dataSet, writeArea} = this
-        const key = `${appId}/${dataSet}/${writeArea}/${S3UpdateStore.bucketKey(update.id)}`
-        this._storeInS3(key, JsonUtil.toStore(update))
+        const updateKey = S3UpdateStore.bucketKey(update.id)
+        const bucketKey = `${appId}/${dataSet}/${writeArea}/${updateKey}`
+        this._storeInS3(bucketKey, JsonUtil.toStore(update))
             .then(() => this.updateStored.send(update))
-            .then(() => console.log('Update stored', update.id))
+            .then(() => console.log('Update stored', updateKey))
             .catch(e => console.error('Failed after sending update', e))
     }
 

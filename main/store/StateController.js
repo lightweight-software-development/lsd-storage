@@ -20,10 +20,15 @@ class StateController {
         this.newUpdate.send({actions: [{type: methodName, data: args[0]}] })
     }
 
+    updateFromClient(update) {
+        this.newUpdate.send(update)
+    }
+
     applySnapshot() {
     }
 
     applyUpdate(update) {
+
         let state = this.state.value
 
         function applyAction(methodName, args) {
@@ -35,9 +40,15 @@ class StateController {
             state = updateFunction.apply(state, args)
         }
 
-        update.actions.forEach(a => {applyAction(a.type, [a.data])} )
-        if (state !== this.state.value) {
-            this.state.value = state
+        try {
+            update.actions.forEach(a => {
+                applyAction(a.type, [a.data])
+            })
+            if (state !== this.state.value) {
+                this.state.value = state
+            }
+        } catch (e) {
+            console.error(`Could not do update ${update.id}: ${e.message}`)
         }
     }
 }

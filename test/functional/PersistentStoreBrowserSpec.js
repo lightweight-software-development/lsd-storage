@@ -1,8 +1,9 @@
 const chai = require('chai')
 const chaiSubset = require('chai-subset')
-const {PersistentStore, LocalUpdateStore, AccessKeyCredentialsSource, S3UpdateStore, JsonUtil} = require('../../main')
+const {PersistentStore, LocalUpdateStore, AccessKeyCredentialsSource, S3UpdateStore, JsonUtil} = require('../../main/index')
 const {capture, waitFor} = require('../testutil/Helpers')
 const TestS3Store = require('../testutil/TestS3Store')
+const TestItem = require('../testutil/TestItem')
 const uuid = require('node-uuid')
 const _ = require('lodash')
 const fs = require('fs')
@@ -11,22 +12,9 @@ const fs = require('fs')
 chai.should()
 chai.use(chaiSubset)
 
-class TestItem {
-    constructor(name, index) {
-        this.name = name
-        this.index = index
-    }
-
-    toJSON() {
-        return {"@type": this.constructor.name, name: this.name, index: this.index}
-    }
-
-}
-
-JsonUtil.registerClass(TestItem)
-
+let nextId = 1001
 function testAction(name, index) {
-    return {type: 'TEST', data: new TestItem(name, index)}
+    return {type: 'TEST', data: new TestItem(nextId++, name, index)}
 }
 
 function testUpdate(name, index = 0) {

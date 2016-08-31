@@ -2,35 +2,22 @@ const chai = require('chai')
 const chaiSubset = require('chai-subset')
 const _ = require('lodash')
 const fs = require('fs')
-const {capture, captureFlat, waitFor, waitForError} = require('../testutil/Helpers')
+const {capture, captureFlat, waitFor, waitForWithError, waitForData} = require('../testutil/Helpers')
+const TestItem = require('../testutil/TestItem')
 const TestS3Store = require('../testutil/TestS3Store')
-const {LocalUpdateStore, S3UpdateStore, StateController, PersistentStore, JsonUtil, AccessKeyCredentialsSource, Promoter} = require('../../main')
+const {LocalUpdateStore, S3UpdateStore, StateController, PersistentStore, JsonUtil, AccessKeyCredentialsSource, Promoter} = require('../../main/index')
 
 chai.should()
 chai.use(chaiSubset)
 
-class TestItem {
-    constructor(id, name, index) {
-        this.id = id
-        this.name = name
-        this.index = index
-    }
-
-    toJSON() {
-        return {"@type": this.constructor.name, name: this.name, index: this.index}
-    }
-
-}
-
-JsonUtil.registerClass(TestItem)
-
 class TestApp {
-    constructor() {
-        this.items = {}
+    constructor(items = {}) {
+        this.items = items
     }
 
     setItem(item) {
-        this.items = Object.merge({}, this.items, {[item.id]: item})
+        const newItems = Object.assign({}, this.items, {[item.id]: item})
+        return new TestApp(newItems)
     }
 
     item(id) {
@@ -60,8 +47,8 @@ describe("App instances communicate via shared area", function () {
 
         const persistentStore = new PersistentStore(localStore, remoteStore)
 
-        persistentStore.externalUpdate.sendTo(app.applyAction)
-        app.newAction.sendTo(persistentStore.dispatchUpdate)
+        persistentStore.externalUpdate.sendTo(app.applyUpdate)
+        app.newUpdate.sendTo(persistentStore.dispatchUpdate)
 
         persistentStore.init()
 
@@ -76,21 +63,38 @@ describe("App instances communicate via shared area", function () {
         return promoter
     }
 
+    const credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
+    const testS3 = new TestS3Store(testBucket, null, null, appName, dataSet)
 
-    it.skip("apps receive updates from each other", function () {
+    beforeEach(function () {
+        return testS3.clearBucket()
+    })
+
+    it("app stores updates", function () {
         const [appA, persistentStoreA] = createAppWithStore("userA")
-        const [appB, persistentStoreB] = createAppWithStore("userB")
-        const promoter = createPromoter()
-        const testS3 = new TestS3Store(testBucket, null, null, appName, dataSet)
-        setInterval( () => persistentStoreB.checkForUpdates(), 1000)
 
+        const testS3 = new TestS3Store(testBucket, null, null, appName, dataSet)
         const testItem1 = new TestItem("id1", "One", 1)
         appA.update("setItem", testItem1)
 
-        waitFor( () => testS3.getKeys("userA").then( keys => keys.length === 1 ))
-            .then( () => testS3.getKeys("userA").then( keys => promoter.promote(keys[0] ) ))
+        return waitForData( () => testS3.getKeys("user/userA"), keys => keys.length === 1 , 2000 )
+    })
 
-        waitForError( () => appB.appState.item(testItem1.id).should.eql(testItem1) )
+    it("apps receive updates from each other", function () {
+        const [appA, persistentStoreA] = createAppWithStore("userA")
+        const [appB, persistentStoreB] = createAppWithStore("userB")
+        const promoter = createPromoter()
+        const testItem1 = new TestItem("id1", "One", 1)
+
+        setInterval( () => persistentStoreB.checkForUpdates(), 1000)
+
+        appA.update("setItem", testItem1)
+
+        waitForData( () => testS3.getKeys("user/userA"),  keys => keys.length === 1 , 2000 )
+            .then( keys => promoter.promote(keys[0]) )
+
+        return waitForWithError( () => appB.appState.item(testItem1.id).should.eql(testItem1) )
+        // return waitForWithError( () => appB.appState.item(testItem1.id) )
     })
 })
 

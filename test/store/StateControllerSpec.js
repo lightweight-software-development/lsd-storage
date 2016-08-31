@@ -39,6 +39,15 @@ describe("State controller", function () {
         stateChanges.should.have.lengthOf(1)
     })
 
+    it("sends new update when gets update from client but does not change state", function () {
+        controller.updateFromClient({ actions: [ { type: "add", data: 2 } ] })
+
+        controller.newUpdate.latestEvent.should.eql({actions: [{type: "add", data: 2}]})
+        controller.appState.count.should.eql(0)
+        controller.appState.should.equal(state)
+        stateChanges.should.have.lengthOf(1)
+    })
+
     it("applies update and changes state after last action", function () {
         controller.applyUpdate({actions: [{type: "add", data: 2}, {type: "add", data: 3}]})
 

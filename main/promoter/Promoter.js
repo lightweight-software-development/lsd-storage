@@ -7,12 +7,12 @@ function requireAWS() {
 }
 
 const AWS = requireAWS()
-const LocalUpdateStore = require('../../main/store/LocalUpdateStore')
-const S3UpdateStore = require('../../main/store/S3UpdateStore')
-const StateController = require('../../main/store/StateController')
-const PersistentStore = require('../../main/store/PersistentStore')
-const JsonUtil = require('../../main/json/JsonUtil')
-const BuiltinCredentialsSource = require('../../main/store/BuiltinCredentialsSource')
+const LocalUpdateStore = require('../store/LocalUpdateStore')
+const S3UpdateStore = require('../store/S3UpdateStore')
+const StateController = require('../store/StateController')
+const PersistentStore = require('../store/PersistentStore')
+const JsonUtil = require('../json/JsonUtil')
+const BuiltinCredentialsSource = require('../store/BuiltinCredentialsSource')
 
 class Promoter {
 
@@ -21,12 +21,12 @@ class Promoter {
         this.stateController = new StateController(model)
 
         const localStore = new LocalUpdateStore()
-        const remoteStore = new S3UpdateStore(bucketName, 'updates', 'updates', appConfig.appName, appConfig.dataSet, credentialsSource)
+        const remoteStore = new S3UpdateStore(bucketName, 'shared', 'shared', appConfig.appName, appConfig.dataSet, credentialsSource)
 
         this.persistentStore = new PersistentStore(localStore, remoteStore)
 
-        this.persistentStore.externalUpdate.sendTo(this.stateController.applyAction)
-        this.stateController.newAction.sendTo(this.persistentStore.dispatchUpdate)
+        this.persistentStore.externalUpdate.sendTo(this.stateController.applyUpdate)
+        this.stateController.newUpdate.sendTo(this.persistentStore.dispatchUpdate)
 
         this.persistentStore.init()
 
@@ -40,15 +40,7 @@ class Promoter {
                 const body = data.Body
                 try {
                     const update = JsonUtil.fromStore(body)
-                    update.unsavedUpdates.forEach( (action, index) => {
-                        try {
-                            this.stateController.update(action.type, action.data)
-                        } catch (e) {
-                            console.error(`${e.message} Update Key: ${key}  Action index: ${index} Update Body: ${body}`)
-                        }
-                    })
-
-
+                    this.stateController.updateFromClient(update)
                 } catch (e) {
                     throw new Error(`${e.message} Key: ${key}  Body: ${body}`)
                 }
