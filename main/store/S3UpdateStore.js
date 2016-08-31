@@ -26,10 +26,11 @@ module.exports = class S3UpdateStore {
     storeUpdate(update) {
         const {appId, dataSet, writeArea} = this
         const updateKey = S3UpdateStore.bucketKey(update.id)
-        const bucketKey = `${appId}/${dataSet}/${writeArea}/${updateKey}`
+        const userArea = this.cognitoIdentityId ? "/" + this.cognitoIdentityId : ""
+        const bucketKey = `${appId}/${dataSet}/${writeArea}${userArea}/${updateKey}`
         this._storeInS3(bucketKey, JsonUtil.toStore(update))
             .then(() => this.updateStored.send(update))
-            // .then(() => console.log('Update stored', updateKey))
+            .then(() => console.log('Update stored', updateKey))
             .catch(e => console.error('Failed after sending update', e))
     }
 
@@ -85,6 +86,10 @@ module.exports = class S3UpdateStore {
     credentialsAvailable(credentials) {
         if (typeof credentials === "object") {
             AWS.config.credentials = credentials;
+        }
+
+        if (credentials instanceof AWS.CognitoIdentityCredentials) {
+            this.cognitoIdentityId = credentials.params.IdentityId
         }
 
         this.s3 = new AWS.S3()

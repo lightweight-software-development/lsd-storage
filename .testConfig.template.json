@@ -1,6 +1,6 @@
 {
-  "README": "Copy this file to .testConfig.json and fill in your bucket name and access details",
-  "testBucket": "<your-bucket>",
+  "README": "Copy this file to .testConfig.json and fill in your app name and access details",
+  "appName": "<your_app.name>",
   "testAccessKey": "AKxxxxxxxxxxxxx",
   "testSecretKey": "YPxxxxxxxxxxxxxxxxxxxxxxxxxx"
 }
