@@ -84,7 +84,6 @@ Component that gets incoming actions eg from the user areas is outside the persi
   - export function that gets key out of event and calls promoter, then calls callback
 - Need to check for updates before applying:
   - will do that anyway in current setup (may need to change to keep app responsive)
-- Put in lsd-storage-promoter module that can be incorporated in app with a one-liner, but does not have build and deploy
 
 ## Local/remote refactoring
 
