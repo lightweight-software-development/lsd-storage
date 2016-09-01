@@ -10,6 +10,9 @@ module.exports = class S3UpdateStore {
         return Date.now() + '-' + id
     }
 
+    static get defaultUserAreaPrefix() { return "updates/user" }
+    static get defaultSharedAreaPrefix() { return "updates/shared" }
+
     constructor(bucketName, writeArea, readArea, appId, dataSet, credentialsSource) {
         Object.assign(this, {bucketName, writeArea, readArea, appId, dataSet})
 
