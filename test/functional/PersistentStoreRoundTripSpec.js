@@ -6,6 +6,7 @@ const {capture, captureFlat, waitFor, waitForWithError, waitForData} = require('
 const TestItem = require('../testutil/TestItem')
 const TestS3Store = require('../testutil/TestS3Store')
 const {LocalUpdateStore, S3UpdateStore, StateController, PersistentStore, JsonUtil, AccessKeyCredentialsSource, Promoter} = require('../../main/index')
+const {defaultUserAreaPrefix, defaultSharedAreaPrefix} = S3UpdateStore
 
 chai.should()
 chai.use(chaiSubset)
@@ -46,7 +47,7 @@ describe("App instances communicate via shared area", function () {
 
         const localStore = new LocalUpdateStore()
         const credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
-        const remoteStore = new S3UpdateStore(testBucket, `user/${userId}`, 'shared', appConfig.appName, appConfig.dataSet, credentialsSource)
+        const remoteStore = new S3UpdateStore(testBucket, `${defaultUserAreaPrefix}/${userId}`, defaultSharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
 
         const persistentStore = new PersistentStore(localStore, remoteStore)
 
@@ -88,7 +89,7 @@ describe("App instances communicate via shared area", function () {
                         "arn":`arn:aws:s3:::${testBucket}`
                     },
                     "object":{
-                        "key":key,
+                        "key":encodeURIComponent(key),
                         "size":1024,
                         "eTag":"d41d8cd98f00b204e9800998ecf8427e",
                         "versionId":"096fKKXTRTtl3on89fVO.nfljtsv6qko"
@@ -118,7 +119,7 @@ describe("App instances communicate via shared area", function () {
         const testItem1 = new TestItem("id1", "One", 1)
         appA.update("setItem", testItem1)
 
-        return waitForData( () => testS3.getKeys("user/userA"), keys => keys.length === 1 , 2000 )
+        return waitForData( () => testS3.getKeys(`${defaultUserAreaPrefix}/userA`), keys => keys.length === 1 , 2000 )
     })
 
     it("a second app receives updates from a first", function () {
@@ -132,7 +133,7 @@ describe("App instances communicate via shared area", function () {
 
         appA.update("setItem", testItem1)
 
-        waitForData( () => testS3.getKeys("user/userA"),  keys => keys.length === 1 , 2000 )
+        waitForData( () => testS3.getKeys(`${defaultUserAreaPrefix}/userA`),  keys => keys.length === 1 , 2000 )
             .then( keys => callLambdaHandler(keys[0]) ).catch(logError)
 
         return waitForWithError( () => appB.appState.item(testItem1.id) )
@@ -152,7 +153,7 @@ describe("App instances communicate via shared area", function () {
         appA.update("setItem", testItem1)
         appB.update("setItem", testItem2)
 
-        waitForData( () => testS3.getKeys("user"),  keys => keys.length === 2 , 2000 )
+        waitForData( () => testS3.getKeys(defaultUserAreaPrefix),  keys => keys.length === 2 , 2000 )
             .then( keys => keys.forEach( callLambdaHandler ) ).catch(logError)
 
         return waitForWithError( () => appA.appState.item(testItem2.id) && appB.appState.item(testItem1.id) )

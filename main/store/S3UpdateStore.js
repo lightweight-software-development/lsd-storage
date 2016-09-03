@@ -43,10 +43,10 @@ module.exports = class S3UpdateStore {
 
     _getUpdates() {
         const {s3, bucketName, appId, dataSet, readArea} = this
+        const prefix = `${appId}/${dataSet}/${readArea}/`
         if (!s3) return Promise.resolve([])
 
         function getUpdateKeys() {
-            const prefix = `${appId}/${dataSet}/${readArea}/`
             return s3.listObjectsV2({Bucket: bucketName, Prefix: prefix}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
         }
 
@@ -68,7 +68,7 @@ module.exports = class S3UpdateStore {
         }
 
         return getUpdateKeys().then(getObjectsForKeys).catch(e => {
-            console.error('S3UpdateStore: Error getting updates', e);
+            console.error('S3UpdateStore: Error getting updates from', bucketName, prefix, e);
             return []
         })
     }
@@ -97,7 +97,7 @@ module.exports = class S3UpdateStore {
 
         this.s3 = new AWS.S3()
         this.storeAvailable.value = true
-        // console.log('S3UpdateStore Logged in.');
+        console.log(`S3UpdateStore available.`, this.cognitoIdentityId ? "cognitoIdentityId: " + this.cognitoIdentityId : "");
     }
 
     credentialsInvalid() {
