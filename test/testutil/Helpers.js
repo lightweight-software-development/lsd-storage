@@ -10,6 +10,12 @@ function captureFlat(eventSource) {
     return events
 }
 
+function wait(timeout) {
+    return new Promise(function(resolve) {
+        setTimeout( () => resolve(true), timeout )
+    })
+}
+
 function waitFor(condition, timeout = 5000) {
     const startTime = Date.now()
     return new Promise(function(resolve, reject) {
@@ -107,4 +113,4 @@ function waitForWithError(condition, timeout = 5000) {
     })
 }
 
-module.exports = {capture, captureFlat, waitFor, waitForWithError, waitForData}
+module.exports = {capture, captureFlat, wait, waitFor, waitForWithError, waitForData}

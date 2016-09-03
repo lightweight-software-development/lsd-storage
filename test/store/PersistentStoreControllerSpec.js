@@ -65,7 +65,7 @@ describe("Persistent store controller", function () {
     })
 
     describe("On Startup", function () {
-        it("if offline: applies local stored updates then requests updates from store", function () {
+        it("if offline: applies local stored updates and unstored updates then does not request updates from store", function () {
             const updatesOutput = []
             controller.remoteStoreAvailable(false)
             controller.updatesToApply.sendFlatTo(x => updatesOutput.push(x))
@@ -76,9 +76,9 @@ describe("Persistent store controller", function () {
             updatesOutput.should.be.empty
 
             controller.init()
-            controller.updatesToApply.latestEvent.should.jsMatch([savedUpdate3, savedUpdate4, savedUpdate5])
-            updatesOutput.should.eql([savedUpdate3, savedUpdate4, savedUpdate5])
-            controller.updatesRequested.latestEvent.should.eql(true)
+            controller.updatesToApply.latestEvent.should.jsMatch([savedUpdate1, savedUpdate2])
+            updatesOutput.should.eql([savedUpdate3, savedUpdate4, savedUpdate5, savedUpdate1, savedUpdate2])
+            should.not.exist(controller.updatesRequested.latestEvent)
         })
 
         it("if online: applies local stored updates then requests updates from store", function () {
@@ -105,7 +105,6 @@ describe("Persistent store controller", function () {
             controller.init()
 
             controller.remoteStoreAvailable(true)
-            should.not.exist(controller.updatesToApply.latestEvent)
             controller.updatesRequested.latestEvent.should.eql(true)
         })
 
@@ -131,13 +130,29 @@ describe("Persistent store controller", function () {
     })
 
     describe("Update check requested", function () {
-        it("Starts sync by request updates even if remote store unavailable", function () {
-            controller.remoteStoreAvailable(false)
+        it("Starts sync by request updates if started and remote store available", function () {
+            controller.remoteStoreAvailable(true)
+            controller.init()
             controller.localStoredUpdates([savedUpdate1, savedUpdate2])
 
             controller.checkForUpdates()
             should.not.exist(controller.updatesToApply.latestEvent)
             controller.updatesRequested.latestEvent.should.eql(true)
+        })
+        it("Does not request updates if remote store unavailable or not started", function () {
+            controller.remoteStoreAvailable(true)
+            controller.localStoredUpdates([savedUpdate1, savedUpdate2])
+
+            controller.checkForUpdates()
+            should.not.exist(controller.updatesToApply.latestEvent)
+            should.not.exist(controller.updatesRequested.latestEvent)
+
+            controller.remoteStoreAvailable(false)
+            controller.init()
+
+            controller.checkForUpdates()
+            should.not.exist(controller.updatesRequested.latestEvent)
+
         })
     })
 

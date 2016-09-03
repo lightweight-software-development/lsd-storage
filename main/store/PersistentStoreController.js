@@ -29,8 +29,12 @@ class PersistentStoreController {
         if (this._localStoredUpdates.size) {
             this.updatesToApply.send(this._localStoredUpdates)
         }
-        this._requestUpdates()
         this._started = true
+        if (this._remoteStoreAvailable) {
+            this.checkForUpdates()
+        } else {
+            this._sendUnstoredUpdatesToApp()
+        }
     }
 
     updateFromApp(update) {
@@ -40,7 +44,9 @@ class PersistentStoreController {
     }
 
     checkForUpdates() {
-        this._requestUpdates()
+        if (this._started && this._remoteStoreAvailable) {
+            this._requestUpdates()
+        }
     }
 
     localUnstoredUpdates(updates) {
@@ -58,9 +64,7 @@ class PersistentStoreController {
 
     remoteStoreAvailable(isAvailable) {
         this._remoteStoreAvailable = isAvailable
-        if (this._started && isAvailable) {
-            this._requestUpdates()
-        }
+        this.checkForUpdates()
     }
 
     remoteUpdates(updates) {
@@ -69,10 +73,7 @@ class PersistentStoreController {
         newUpdates.forEach(u => this.updateToStoreLocal.send(u))
         this.updatesToApply.send(newUpdates)
         this.updatesToDelete.send(newUpdates)
-
-        if (this._localUnstoredUpdates.size) {
-            this._sendNewUpdatesToApp(this._localUnstoredUpdates)
-        }
+        this._sendUnstoredUpdatesToApp()
         this._sendUpdateToStoreRemote()
     }
 
@@ -81,6 +82,13 @@ class PersistentStoreController {
     }
 
     // Outgoing
+
+    _sendUnstoredUpdatesToApp() {
+        if (this._localUnstoredUpdates.size) {
+            this._sendNewUpdatesToApp(this._localUnstoredUpdates)
+        }
+    }
+
     _sendUpdateToStoreRemote() {
         const updates = this._localUnstoredUpdates
         if (this._remoteStoreAvailable) {
