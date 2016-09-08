@@ -1,6 +1,6 @@
 {
   "README": "Copy this file to .testConfig.json and fill in your app name and access details",
-  "appName": "<your_app.name>",
+  "appName": "<your_app.name eg mycompany.lsd-storage-test>",
   "testAccessKey": "AKxxxxxxxxxxxxx",
   "testSecretKey": "YPxxxxxxxxxxxxxxxxxxxxxxxxxx"
 }
