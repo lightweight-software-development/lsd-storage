@@ -10,7 +10,8 @@ Bugs
 Improvements
 ------------
 
-  - Update scheduler
+- Handle local user validation errors
+- Handle remote update validation errors
 - Only request updates with timestamp on or after the latest one you have got, but not ones you already have
 - User IndexedDb
 - Multiple update sources - user and shared
