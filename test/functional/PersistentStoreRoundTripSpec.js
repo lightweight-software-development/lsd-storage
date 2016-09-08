@@ -6,7 +6,7 @@ const {capture, captureFlat, waitFor, waitForWithError, waitForData} = require('
 const TestItem = require('../testutil/TestItem')
 const TestS3Store = require('../testutil/TestS3Store')
 const {LocalUpdateStore, S3UpdateStore, StateController, PersistentStore, JsonUtil, AccessKeyCredentialsSource, Promoter} = require('../../main/index')
-const {defaultUserAreaPrefix, defaultSharedAreaPrefix} = S3UpdateStore
+const [userAreaPrefix, sharedAreaPrefix] = ["updates/user", "updates/shared"]
 
 chai.should()
 chai.use(chaiSubset)
@@ -47,7 +47,7 @@ describe("App instances communicate via shared area", function () {
 
         const localStore = new LocalUpdateStore()
         const credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
-        const remoteStore = new S3UpdateStore(testBucket, `${defaultUserAreaPrefix}/${userId}`, defaultSharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
+        const remoteStore = new S3UpdateStore(testBucket, `${userAreaPrefix}/${userId}`, sharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
 
         const persistentStore = new PersistentStore(localStore, remoteStore)
 
@@ -119,21 +119,21 @@ describe("App instances communicate via shared area", function () {
         const testItem1 = new TestItem("id1", "One", 1)
         appA.update("setItem", testItem1)
 
-        return waitForData( () => testS3.getKeys(`${defaultUserAreaPrefix}/userA`), keys => keys.length === 1 , 2000 )
+        return waitForData( () => testS3.getKeys(`${userAreaPrefix}/userA`), keys => keys.length === 1 , 2000 )
     })
 
     it("a second app receives updates from a first", function () {
         const [appA, persistentStoreA] = createAppWithStore("userA")
         const [appB, persistentStoreB] = createAppWithStore("userB")
         const testItem1 = new TestItem("id1", "One", 1)
-        const lambdaHandler = Promoter.createLambdaHandler("data", new TestApp(), appName, dataSet)
+        const lambdaHandler = Promoter.createLambdaHandler("data", sharedAreaPrefix, new TestApp(), appName, dataSet)
         const callLambdaHandler = (key) => lambdaHandler(lambdaEvent(key), {functionName: promoterLambdaFunctionName}, (c) => {})
 
         setInterval( () => persistentStoreB.checkForUpdates(), 1000)
 
         appA.update("setItem", testItem1)
 
-        waitForData( () => testS3.getKeys(`${defaultUserAreaPrefix}/userA`),  keys => keys.length === 1 , 2000 )
+        waitForData( () => testS3.getKeys(`${userAreaPrefix}/userA`), keys => keys.length === 1 , 2000 )
             .then( keys => callLambdaHandler(keys[0]) ).catch(logError)
 
         return waitForWithError( () => appB.appState.item(testItem1.id) )
@@ -144,7 +144,7 @@ describe("App instances communicate via shared area", function () {
         const [appB, persistentStoreB] = createAppWithStore("userB")
         const testItem1 = new TestItem("id1", "One", 1)
         const testItem2 = new TestItem("id2", "Two", 2)
-        const lambdaHandler = Promoter.createLambdaHandler("data", new TestApp(), appName, dataSet)
+        const lambdaHandler = Promoter.createLambdaHandler("data", sharedAreaPrefix, new TestApp(), appName, dataSet)
         const callLambdaHandler = (key) => lambdaHandler(lambdaEvent(key), {functionName: promoterLambdaFunctionName}, (c) => {})
 
         setInterval( () => persistentStoreA.checkForUpdates(), 1000)
@@ -153,7 +153,7 @@ describe("App instances communicate via shared area", function () {
         appA.update("setItem", testItem1)
         appB.update("setItem", testItem2)
 
-        waitForData( () => testS3.getKeys(defaultUserAreaPrefix),  keys => keys.length === 2 , 2000 )
+        waitForData( () => testS3.getKeys(userAreaPrefix), keys => keys.length === 2 , 2000 )
             .then( keys => keys.forEach( callLambdaHandler ) ).catch(logError)
 
         return waitForWithError( () => appA.appState.item(testItem2.id) && appB.appState.item(testItem1.id) )

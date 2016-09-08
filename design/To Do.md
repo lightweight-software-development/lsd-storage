@@ -2,6 +2,7 @@
 
 Bugs
 ----
+
 - Do not delete unsaved update if storing in S3 fails
 - Fails to get cognito identity when first sign in - may be when identity pool has changed
 

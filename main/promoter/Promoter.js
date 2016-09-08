@@ -5,11 +5,10 @@ const StateController = require('../store/StateController')
 const PersistentStore = require('../store/PersistentStore')
 const JsonUtil = require('../json/JsonUtil')
 const BuiltinCredentialsSource = require('../store/BuiltinCredentialsSource')
-const {defaultSharedAreaPrefix} = S3UpdateStore
 
 class Promoter {
 
-    static createLambdaHandler(dataBucketNameSuffix, model, appName, dataSet) {
+    static createLambdaHandler(dataBucketNameSuffix, sharedAreaPrefix, model, appName, dataSet) {
         const appConfig = {appName, dataSet}
         let promoter
 
@@ -18,7 +17,7 @@ class Promoter {
             let env = functionNameRegex.exec(context.functionName)[1];
 
             const bucketName = `${appName}-${env}-${dataBucketNameSuffix}`
-            return promoter || (promoter = new Promoter(bucketName, model, appConfig))
+            return promoter || (promoter = new Promoter(bucketName, sharedAreaPrefix, model, appConfig))
         }
 
         return function (event, context, callback) {
@@ -28,12 +27,12 @@ class Promoter {
         }
     }
 
-    constructor(bucketName, model, appConfig, credentialsSource = new BuiltinCredentialsSource()) {
+    constructor(bucketName, sharedAreaPrefix, model, appConfig, credentialsSource = new BuiltinCredentialsSource()) {
         this.bucketName = bucketName
         this.stateController = new StateController(model)
 
         const localStore = new LocalUpdateStore()
-        const remoteStore = new S3UpdateStore(bucketName, defaultSharedAreaPrefix, defaultSharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
+        const remoteStore = new S3UpdateStore(bucketName, sharedAreaPrefix, sharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
 
         this.persistentStore = new PersistentStore(localStore, remoteStore)
 
