@@ -18,7 +18,7 @@ When the application starts up, all the updates are retrieved from the remote st
 
 ## How it works
 
-!(design/diagrams/Lsd_Storage_Overview.png "LSD in a browser")
+![LSD Storage diagram](design/diagrams/LSD_Storage_Overview.png "LSD in a browser")
 
 ## Using it in an application
 
