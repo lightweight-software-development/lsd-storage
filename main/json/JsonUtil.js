@@ -21,10 +21,6 @@ function reviver(key, value) {
         return new Date(value);
     }
 
-    if (_.isArray(value) && key === 'postings') {
-        return new List(value)
-    }
-
     const type = value && value['@type'];
     if (type) {
         const clazz = serializableClasses.find( c => c.name == type);

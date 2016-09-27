@@ -32,7 +32,8 @@ class Promoter {
         this.stateController = new StateController(model)
 
         const localStore = new LocalUpdateStore()
-        const remoteStore = new S3UpdateStore(bucketName, sharedAreaPrefix, sharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
+        const remoteStore = new S3UpdateStore({bucketName, writeArea: sharedAreaPrefix, readArea: sharedAreaPrefix,
+                                                appId: appConfig.appName, dataSet: appConfig.dataSet, credentialsSource})
 
         this.persistentStore = new PersistentStore(localStore, remoteStore)
 

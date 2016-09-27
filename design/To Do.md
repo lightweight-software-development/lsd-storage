@@ -10,11 +10,16 @@ Bugs
 Improvements
 ------------
 
+- Multiple update sources - user and shared
+- Data promotion rules
+
+
+- Browser tests - esp for IDB and auth
 - Handle local user validation errors
 - Handle remote update validation errors
 - Only request updates with timestamp on or after the latest one you have got, but not ones you already have
-- User IndexedDb
-- Multiple update sources - user and shared
+- Update bundling
+- Use IndexedDb
 - Refactor startup and local storage out of controller
 - Review when/how to apply actions to local state and merge with external updates
 - Track all actions applied, not just local

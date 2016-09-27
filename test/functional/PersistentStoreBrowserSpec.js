@@ -50,13 +50,19 @@ describe("Persistent store in browser", function () {
     }
 
     function incomingUpdates(...updates) {
-        return testS3Store.clearBucket().then(() => testS3Store.setupIncomingUpdates(...updates))
+        const secondHalf = Math.floor(updates.length / 2)
+        const updates1 = secondHalf > 0 ? updates.slice(0, secondHalf) : updates
+        const updates2 = secondHalf > 0 ? updates.slice(secondHalf) : []
+        return testS3Store.clearBucket().then(() => testS3Store.setupIncomingUpdates(updates1, updates2))
     }
 
     beforeEach("set up app", function () {
         localData = {unsavedUpdates: [], updates: []}
         credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
-        remoteStore = new S3UpdateStore(testBucket, "outgoingUpdates", "incomingUpdates", appName, dataSet, credentialsSource)
+        remoteStore = new S3UpdateStore({
+            bucketName: testBucket, writeArea: "outgoingUpdates", readArea: ["incomingUpdates1", "incomingUpdates2"],
+            appId: appName, dataSet, credentialsSource
+        })
 
         testS3Store = new TestS3Store(testBucket, "outgoingUpdates", "incomingUpdates", appName, dataSet)
     })
@@ -64,30 +70,31 @@ describe("Persistent store in browser", function () {
     describe("On startup", function () {
 
         it("online: loads local updates, loads new remote updates, loads local unsaved updates and stores them remotely", function () {
-            return incomingUpdates(savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5).then(function () {
-                localData.updates = [savedUpdate1, savedUpdate2]
-                localData.unsavedUpdates = [savedUpdate6, savedUpdate7]
-                createPersistentStore()
+            return incomingUpdates(savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5)
+                .then(function () {
+                    localData.updates = [savedUpdate1, savedUpdate2]
+                    localData.unsavedUpdates = [savedUpdate6, savedUpdate7]
+                    createPersistentStore()
 
-                store.init()
+                    store.init()
 
-                return waitFor(() => {
-                    return externalUpdates.length === 7
-                }, 2000)
-                    .then(function () {
-                        return waitFor(() => localData.unsavedUpdates.length === 0, 2000)
-                    })
-                    .then(function () {
-                        return waitFor(() => testS3Store.getOutgoingUpdates().then(updates => updates.length === 2), 2000)
-                            .then(() => testS3Store.getOutgoingUpdates().then(updates => updates.should.eql([savedUpdate6, savedUpdate7])))
-                    })
-                    .then(function () {
-                        const sortedUpdates = _.sortBy(externalUpdates, a => a.actions[0].data.index)
-                        sortedUpdates.should.eql([savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5, savedUpdate6, savedUpdate7])
-                        sortedUpdates.forEach( a => a.actions[0].data.should.be.instanceof(TestItem) )
-                    })
+                    return waitFor(() => {
+                        return externalUpdates.length === 7
+                    }, 2000)
+                        .then(function () {
+                            return waitFor(() => localData.unsavedUpdates.length === 0, 2000)
+                        })
+                        .then(function () {
+                            return waitFor(() => testS3Store.getOutgoingUpdates().then(updates => updates.length === 2), 2000)
+                                .then(() => testS3Store.getOutgoingUpdates().then(updates => updates.should.eql([savedUpdate6, savedUpdate7])))
+                        })
+                        .then(function () {
+                            const sortedUpdates = _.sortBy(externalUpdates, a => a.actions[0].data.index)
+                            sortedUpdates.should.eql([savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5, savedUpdate6, savedUpdate7])
+                            sortedUpdates.forEach(a => a.actions[0].data.should.be.instanceof(TestItem))
+                        })
 
-            })
+                })
         })
 
         it("offline: loads local updates, loads local unsaved updates", function () {
@@ -117,7 +124,7 @@ describe("Persistent store in browser", function () {
                 return incomingUpdates(savedUpdate1, savedUpdate2)
                     .then(() => {
                         store.dispatchUpdate(testUpdate1)
-                        return waitFor(() =>  {
+                        return waitFor(() => {
                             return externalUpdates.length === 3
                         }, 2000)
                     })
@@ -190,7 +197,7 @@ describe("Persistent store in browser", function () {
         describe("On startup", function () {
 
             it("loads new remote updates", function () {
-                return incomingUpdates(savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5 ).then(function () {
+                return incomingUpdates(savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5).then(function () {
                     createPersistentStore()
 
                     store.init()
@@ -201,7 +208,7 @@ describe("Persistent store in browser", function () {
                         .then(function () {
                             const sortedUpdates = _.sortBy(externalUpdates, a => a.actions[0].data.index)
                             sortedUpdates.should.eql([savedUpdate1, savedUpdate2, savedUpdate3, savedUpdate4, savedUpdate5])
-                            sortedUpdates.forEach( a => a.actions[0].data.should.be.instanceof(TestItem) )
+                            sortedUpdates.forEach(a => a.actions[0].data.should.be.instanceof(TestItem))
                         })
 
                 })

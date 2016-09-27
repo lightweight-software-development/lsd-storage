@@ -3,6 +3,7 @@ const AWS = requireAWS()
 const {ObservableValue, ObservableEvent, bindFunctions} = require('lsd-observable')
 const JsonUtil = require('../json/JsonUtil')
 
+function asArray(obj) { return [].concat(obj) }
 
 module.exports = class S3UpdateStore {
 
@@ -10,8 +11,8 @@ module.exports = class S3UpdateStore {
         return Date.now() + '-' + id
     }
 
-    constructor(bucketName, writeArea, readArea, appId, dataSet, credentialsSource) {
-        Object.assign(this, {bucketName, writeArea, readArea, appId, dataSet})
+    constructor({bucketName, writeArea, readArea, appId, dataSet, credentialsSource}) {
+        Object.assign(this, {bucketName, writeArea, readAreas: asArray(readArea), appId, dataSet})
 
         this.updateStored = new ObservableEvent()
         this.storeAvailable = new ObservableValue(false)
@@ -39,12 +40,17 @@ module.exports = class S3UpdateStore {
     }
 
     _getUpdates() {
-        const {s3, bucketName, appId, dataSet, readArea} = this
-        const prefix = `${appId}/${dataSet}/${readArea}/`
+        const {s3, bucketName, appId, dataSet, readAreas} = this
+        const prefixes = readAreas.map( a => `${appId}/${dataSet}/${a}/` )
         if (!s3) return Promise.resolve([])
 
-        function getUpdateKeys() {
+        function getUpdateKeys(prefix) {
             return s3.listObjectsV2({Bucket: bucketName, Prefix: prefix}).promise().then(listData => listData.Contents.map(x => x.Key).filter( k => !k.endsWith("/")))
+        }
+
+        function getAllUpdateKeys() {
+            const promises = prefixes.map(getUpdateKeys)
+            return Promise.all(promises).then( keyLists => [].concat(...keyLists))
         }
 
         function getObjectBody(key) {
@@ -64,7 +70,7 @@ module.exports = class S3UpdateStore {
             return Promise.all(promises)
         }
 
-        return getUpdateKeys().then(getObjectsForKeys).catch(e => {
+        return getAllUpdateKeys().then(getObjectsForKeys).catch(e => {
             console.error('S3UpdateStore: Error getting updates from', bucketName, prefix, e);
             return []
         })

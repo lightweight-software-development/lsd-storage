@@ -47,7 +47,7 @@ describe("App instances communicate via shared area", function () {
 
         const localStore = new LocalUpdateStore()
         const credentialsSource = new AccessKeyCredentialsSource(testAccessKey, testSecretKey)
-        const remoteStore = new S3UpdateStore(testBucket, `${userAreaPrefix}/${userId}`, sharedAreaPrefix, appConfig.appName, appConfig.dataSet, credentialsSource)
+        const remoteStore = new S3UpdateStore({bucketName: testBucket, writeArea: `${userAreaPrefix}/${userId}`, readArea: sharedAreaPrefix, appId: appConfig.appName, dataSet: appConfig.dataSet, credentialsSource})
 
         const persistentStore = new PersistentStore(localStore, remoteStore)
 
