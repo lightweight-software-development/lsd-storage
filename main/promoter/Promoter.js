@@ -9,6 +9,7 @@ const BuiltinCredentialsSource = require('../store/BuiltinCredentialsSource')
 class Promoter {
 
     static createLambdaHandler(dataBucketNameSuffix, sharedAreaPrefix, model, appName, dataSet) {
+        console.log(`Creating Promoter lambda handler`)
         const appConfig = {appName, dataSet}
         let promoter
 
@@ -28,6 +29,7 @@ class Promoter {
     }
 
     constructor(bucketName, sharedAreaPrefix, model, appConfig, credentialsSource = new BuiltinCredentialsSource()) {
+        console.log(`Promoter: Creating`)
         this.bucketName = bucketName
         this.stateController = new StateController(model)
 
@@ -43,21 +45,26 @@ class Promoter {
         this.persistentStore.init()
 
         this.s3 = new AWS.S3()
+        console.log(`Promoter: Created`)
+
     }
 
     promote(key) {
         console.log(`Promoting ${this.bucketName}/${key}`)
         return this.s3.getObject({Bucket: this.bucketName, Key: key}).promise()
             .then(data => {
+                console.log(`Promoter: Got update from S3`)
                 const body = data.Body
                 try {
                     const update = JsonUtil.fromStore(body)
                     this.stateController.updateFromClient(update)
-                    console.log(`Applied update ${this.bucketName}/${key}`)
+                    console.log(`Promoter: Sent update to controller`)
                 } catch (e) {
-                    console.error(`Failed to promote ${this.bucketName}/${key}`, e)
-                    throw new Error(`${e.message} Key: ${key}  Body: ${body}`)
+                    console.error(`Failed to promote update  Body: ${body}`, e)
+                    throw e
                 }
+
+                this.persistentStore.waitForUpdates().then( () => console.log('Promoter: updates complete') )
             }, e => {console.error("Could not get update to promote", e); throw e})
     }
 }

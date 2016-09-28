@@ -24,6 +24,10 @@ module.exports = class PersistentStore {
         this.controller.checkForUpdates()
     }
 
+    waitForUpdates() {
+        return this.controller.waitForUpdatesComplete()
+    }
+
     _assembleComponents() {
         const {localStore, remoteStore, controller} = this;
 

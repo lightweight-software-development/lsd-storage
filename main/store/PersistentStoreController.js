@@ -7,6 +7,7 @@ class PersistentStoreController {
 
     constructor() {
         this._updatesRequestInFlight = false
+        this._updatesRequestPromise = Promise.resolve()
         this._updateIdsApplied = new Set()
         this._localUnstoredUpdates = new List()
         this._localStoredUpdates = new List()
@@ -21,6 +22,8 @@ class PersistentStoreController {
         this.updateToStoreRemote = new ObservableEvent()
         this.updatesRequested = new ObservableEvent()
         bindFunctions(this)
+
+        this._updatesComplete = new ObservableEvent()
     }
 
 
@@ -38,7 +41,7 @@ class PersistentStoreController {
     }
 
     updateFromApp(update) {
-        const updateWithId = Object.assign({id: uuid.v4()}, update)
+        const updateWithId = update.id ? update : {id: uuid.v4(), ...update}
         this.unsavedUpdateToStore.send(updateWithId)
         this._requestUpdates()
     }
@@ -75,6 +78,12 @@ class PersistentStoreController {
         this.updatesToDelete.send(newUpdates)
         this._sendUnstoredUpdatesToApp()
         this._sendUpdateToStoreRemote()
+        this._updatesComplete.send(true)
+        this._updatesRequestPromise = Promise.resolve()
+    }
+
+    waitForUpdatesComplete() {
+        return this._updatesRequestPromise
     }
 
     _inLocalStoredUpdates(update) {
@@ -100,6 +109,9 @@ class PersistentStoreController {
         if (!this._updatesRequestInFlight) {
             this.updatesRequested.send(true)
             this._updatesRequestInFlight = true
+            this._updatesRequestPromise = new Promise((resolve) => {
+                this._updatesComplete.sendTo(resolve)
+            })
         }
     }
 
