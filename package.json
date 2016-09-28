@@ -2,7 +2,7 @@
   "name": "lsd-storage",
   "description": "Persistently stores updates to an application and synchronises them with other instances of the application",
   "author": "Paul Boocock <paulb@ashridgetech.com>",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "files": [
     "dist"
   ],

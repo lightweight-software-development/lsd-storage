@@ -27,21 +27,25 @@ module.exports = class S3UpdateStore {
     storeUpdate(update) {
         const {appId, dataSet, writeArea} = this
         const updateKey = S3UpdateStore.bucketKey(update.id)
-        const userArea = this.cognitoIdentityId ? "/" + this.cognitoIdentityId : ""
-        const bucketKey = `${appId}/${dataSet}/${writeArea}${userArea}/${updateKey}`
+        const bucketKey = `${appId}/${dataSet}/${writeArea}/${updateKey}`.replace(/\$USER_ID\$/, this.userId)
+        console.log('S3UpdateStore: Storing update', updateKey)
         this._storeInS3(bucketKey, JsonUtil.toStore(update))
             .then(() => this.updateStored.send(update))
-            .then(() => console.log('Update stored', updateKey))
+            .then(() => console.log('S3UpdateStore: Update stored', updateKey))
             .catch(e => console.error('Failed after sending update', e))
     }
 
     requestUpdates() {
-        this._getUpdates().then((updates) => this.incomingUpdates.send(updates))
+        console.log('S3UpdateStore: Requesting updates')
+        this._getUpdates().then((updates) => {
+            console.log('S3UpdateStore: Got updates')
+            return this.incomingUpdates.send(updates)
+        })
     }
 
     _getUpdates() {
         const {s3, bucketName, appId, dataSet, readAreas} = this
-        const prefixes = readAreas.map( a => `${appId}/${dataSet}/${a}/` )
+        const prefixes = readAreas.map( a => `${appId}/${dataSet}/${a}/`.replace(/\$USER_ID\$/, this.userId) )
         if (!s3) return Promise.resolve([])
 
         function getUpdateKeys(prefix) {
@@ -71,7 +75,7 @@ module.exports = class S3UpdateStore {
         }
 
         return getAllUpdateKeys().then(getObjectsForKeys).catch(e => {
-            console.error('S3UpdateStore: Error getting updates from', bucketName, prefix, e);
+            console.error('S3UpdateStore: Error getting updates from', bucketName, prefixes.join(','), e);
             return []
         })
     }
@@ -94,13 +98,13 @@ module.exports = class S3UpdateStore {
             AWS.config.credentials = credentials;
         }
 
-        if (credentials instanceof AWS.CognitoIdentityCredentials) {
-            this.cognitoIdentityId = credentials.params.IdentityId
+        if (credentials.userId) {
+            this.userId = credentials.userId
         }
 
         this.s3 = new AWS.S3()
         this.storeAvailable.value = true
-        console.log(`S3UpdateStore available.`, this.cognitoIdentityId ? "cognitoIdentityId: " + this.cognitoIdentityId : "");
+        console.log(`S3UpdateStore available.`, this.userId ? "userId: " + this.userId : "");
     }
 
     credentialsInvalid() {

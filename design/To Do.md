@@ -4,13 +4,13 @@ Bugs
 ----
 
 - Do not delete unsaved update if storing in S3 fails
-- Fails to get cognito identity when first sign in - may be when identity pool has changed
+- Fails to get cognito identity when first sign in - may be when identity pool has changed - which it won't in future
 - Stop requests when get error
 
 Improvements
 ------------
 
-- Multiple update sources - user and shared
+  - Multiple update sources - user and shared
 - Data promotion rules
 
 

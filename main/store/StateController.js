@@ -28,7 +28,7 @@ class StateController {
     }
 
     applyUpdate(update) {
-
+        console.log("StateController: applyUpdate starting")
         let state = this.state.value
 
         function applyAction(methodName, args) {
@@ -47,6 +47,7 @@ class StateController {
             if (state !== this.state.value) {
                 this.state.value = state
             }
+            console.log("StateController: applyUpdate done")
         } catch (e) {
             console.error(`Could not do update ${update.id}: ${e.message}`)
         }

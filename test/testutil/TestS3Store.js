@@ -6,8 +6,8 @@ const S3UpdateStore = require('../../main/store/S3UpdateStore')
 
 module.exports = class TestS3Store {
     //TODO pass in prefixes from test
-    constructor(bucketName, outgoingPrefix, incomingPrefix, appId, dataSet) {
-        Object.assign(this, {bucketName, outgoingPrefix, incomingPrefix, appId, dataSet})
+    constructor(bucketName, outgoingPrefix, incomingPrefixes, appId, dataSet) {
+        Object.assign(this, {bucketName, outgoingPrefix, incomingPrefixes, appId, dataSet})
         this.s3 = new AWS.S3()
     }
 
@@ -82,21 +82,21 @@ module.exports = class TestS3Store {
     }
 
     setupIncomingUpdates(updates1, updates2) {
-        const folderPromise1 = this._storeInS3(this._folderKey(1), '')
-        const folderPromise2 = this._storeInS3(this._folderKey(2), '')
-        const otherFolderPromise1 = this._storeInS3(this._otherFolderKey(1), '')
-        const otherFolderPromise2 = this._storeInS3(this._otherFolderKey(2), '')
-        const promises1 = updates1.map(u => this.storeIncomingUpdate(1, u)).concat(folderPromise1, otherFolderPromise1)
-        const promises2 = updates2.map(u => this.storeIncomingUpdate(2, u)).concat(folderPromise2, otherFolderPromise2)
+        const folderPromise1 = this._storeInS3(this._folderKey(0), '')
+        const folderPromise2 = this._storeInS3(this._folderKey(1), '')
+        const otherFolderPromise1 = this._storeInS3(this._otherFolderKey(0), '')
+        const otherFolderPromise2 = this._storeInS3(this._otherFolderKey(1), '')
+        const promises1 = updates1.map(u => this.storeIncomingUpdate(0, u)).concat(folderPromise1, otherFolderPromise1)
+        const promises2 = updates2.map(u => this.storeIncomingUpdate(1, u)).concat(folderPromise2, otherFolderPromise2)
         return Promise.all(promises1.concat(promises2))
     }
 
     _folderKey(updatesAreaIndex) {
-        return `${this.appId}/${this.dataSet}/${this.incomingPrefix}${updatesAreaIndex}/`
+        return `${this.appId}/${this.dataSet}/${this.incomingPrefixes[updatesAreaIndex]}/`
     }
 
     _otherFolderKey(updatesAreaIndex) {
-        return `${this.appId}/${this.dataSet}/${this.incomingPrefix}${updatesAreaIndex}_2/`
+        return `${this.appId}/${this.dataSet}/${this.incomingPrefixes[updatesAreaIndex]}_other/`
     }
 
     _storeInS3(key, objectContent) {

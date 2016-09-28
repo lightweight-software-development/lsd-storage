@@ -18,6 +18,7 @@ class CognitoCredentialsSource {
                 'accounts.google.com': authResponse.id_token
             }
         })
+        credentials.userId = credentials.params.IdentityId
         this.credentialsAvailable.value = credentials
     }
 
