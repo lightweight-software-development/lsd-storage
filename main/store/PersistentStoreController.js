@@ -1,4 +1,4 @@
-const uuid = require('node-uuid')
+const uuid = require('uuid')
 const {List, Set} = require('immutable')
 
 const {ObservableEvent, bindFunctions} = require('lsd-observable')

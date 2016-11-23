@@ -4,7 +4,7 @@ const {PersistentStore, LocalUpdateStore, AccessKeyCredentialsSource, S3UpdateSt
 const {capture, waitFor} = require('../testutil/Helpers')
 const TestS3Store = require('../testutil/TestS3Store')
 const TestItem = require('../testutil/TestItem')
-const uuid = require('node-uuid')
+const uuid = require('uuid')
 const _ = require('lodash')
 const fs = require('fs')
 

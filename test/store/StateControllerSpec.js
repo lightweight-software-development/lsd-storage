@@ -3,7 +3,7 @@ const chai = require('chai'),
     sinon = require("sinon"),
     sinonChai = require("sinon-chai"),
     _ = require('lodash'),
-    uuid = require('node-uuid'),
+    uuid = require('uuid'),
     {capture, captureFlat} = require('../testutil/Helpers')
     StateController = require('../../main/store/StateController')
 
